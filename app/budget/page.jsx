@@ -1,35 +1,53 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
 
 export default function Budget() {
-  const [expenses, setExpenses] = useState([
-    { id: 1, category: 'Hall', description: 'Wedding venue', amount: 15000, paid: false },
-    { id: 2, category: 'Catering', description: 'Food and drinks', amount: 8000, paid: true },
-  ])
+  const [expenses, setExpenses] = useState([])
   const [form, setForm] = useState({ category: 'Hall', description: '', amount: '' })
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   const categories = ['Hall', 'Catering', 'Music', 'Photography', 'Flowers', 'Clothing', 'Invitations', 'Transportation', 'Other']
 
-  const addExpense = () => {
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      setUser(user)
+      const { data } = await supabase.from('expenses').select('*').eq('user_id', user.id)
+      setExpenses(data || [])
+      setLoading(false)
+    }
+    init()
+  }, [])
+
+  const addExpense = async () => {
     if (!form.description || !form.amount) return
-    setExpenses(prev => [...prev, { id: Date.now(), ...form, amount: parseFloat(form.amount), paid: false }])
+    const newExpense = { user_id: user.id, category: form.category, description: form.description, amount: parseFloat(form.amount), paid: false }
+    const { data } = await supabase.from('expenses').insert(newExpense).select()
+    setExpenses(prev => [...prev, data[0]])
     setForm({ category: 'Hall', description: '', amount: '' })
   }
 
-  const togglePaid = (id) => {
-    setExpenses(prev => prev.map(e => e.id === id ? { ...e, paid: !e.paid } : e))
+  const togglePaid = async (id, currentPaid) => {
+    await supabase.from('expenses').update({ paid: !currentPaid }).eq('id', id)
+    setExpenses(prev => prev.map(e => e.id === id ? { ...e, paid: !currentPaid } : e))
   }
 
-  const deleteExpense = (id) => {
+  const deleteExpense = async (id) => {
+    await supabase.from('expenses').delete().eq('id', id)
     setExpenses(prev => prev.filter(e => e.id !== id))
   }
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
   const paid = expenses.filter(e => e.paid).reduce((sum, e) => sum + e.amount, 0)
   const remaining = total - paid
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,7 +60,6 @@ export default function Budget() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Budget Organizer 💰</h2>
         <p className="text-gray-500 mb-8">Track all your simcha expenses in one place</p>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-2xl border shadow-sm p-6 text-center">
             <p className="text-gray-500 text-sm mb-1">Total Budget</p>
@@ -58,7 +75,6 @@ export default function Budget() {
           </div>
         </div>
 
-        {/* Add Expense Form */}
         <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <h3 className="font-bold text-blue-900 mb-4">Add Expense</h3>
           <div className="grid grid-cols-3 gap-3 mb-3">
@@ -73,12 +89,12 @@ export default function Budget() {
           </button>
         </div>
 
-        {/* Expense List */}
         <div className="bg-white rounded-2xl border shadow-sm divide-y">
+          {expenses.length === 0 && <p className="text-center text-gray-400 py-8">No expenses yet. Add your first one!</p>}
           {expenses.map(e => (
             <div key={e.id} className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-4">
-                <input type="checkbox" checked={e.paid} onChange={() => togglePaid(e.id)} className="w-4 h-4 accent-blue-900" />
+                <input type="checkbox" checked={e.paid} onChange={() => togglePaid(e.id, e.paid)} className="w-4 h-4 accent-blue-900" />
                 <div>
                   <p className={`text-sm font-semibold ${e.paid ? 'line-through text-gray-400' : 'text-gray-700'}`}>{e.description}</p>
                   <p className="text-xs text-gray-400">{e.category}</p>
