@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
 
 const guides = {
   Lchaim: [
@@ -52,14 +53,49 @@ const guides = {
 export default function Guide() {
   const [selected, setSelected] = useState('Wedding')
   const [checked, setChecked] = useState({})
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  const toggle = (item) => {
-    setChecked(prev => ({ ...prev, [item]: !prev[item] }))
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      setUser(user)
+      await loadChecklist(user.id, 'Wedding')
+      setLoading(false)
+    }
+    init()
+  }, [])
+
+  const loadChecklist = async (userId, type) => {
+    const { data } = await supabase.from('checklist').select('*').eq('user_id', userId).eq('simcha_type', type)
+    const newChecked = {}
+    data?.forEach(row => { if (row.completed) newChecked[row.item] = true })
+    setChecked(newChecked)
+  }
+
+  const toggle = async (item) => {
+    const newVal = !checked[item]
+    setChecked(prev => ({ ...prev, [item]: newVal }))
+    const { data } = await supabase.from('checklist').select('*').eq('user_id', user.id).eq('simcha_type', selected).eq('item', item)
+    if (data?.length > 0) {
+      await supabase.from('checklist').update({ completed: newVal }).eq('id', data[0].id)
+    } else {
+      await supabase.from('checklist').insert({ user_id: user.id, simcha_type: selected, item, completed: newVal })
+    }
+  }
+
+  const switchTab = async (type) => {
+    setSelected(type)
+    setChecked({})
+    if (user) await loadChecklist(user.id, type)
   }
 
   const items = guides[selected]
   const done = items.filter(i => checked[i]).length
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,12 +108,11 @@ export default function Guide() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Simcha Guide 📋</h2>
         <p className="text-gray-500 mb-6">Select your simcha type and check off each step</p>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-8 flex-wrap">
           {Object.keys(guides).map(type => (
             <button
               key={type}
-              onClick={() => { setSelected(type); setChecked({}) }}
+              onClick={() => switchTab(type)}
               className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${selected === type ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}
             >
               {type}
@@ -85,7 +120,6 @@ export default function Guide() {
           ))}
         </div>
 
-        {/* Progress */}
         <div className="mb-6">
           <div className="flex justify-between text-sm text-gray-500 mb-1">
             <span>{done} of {items.length} completed</span>
@@ -96,7 +130,6 @@ export default function Guide() {
           </div>
         </div>
 
-        {/* Checklist */}
         <div className="bg-white rounded-2xl border shadow-sm divide-y">
           {items.map(item => (
             <div key={item} onClick={() => toggle(item)} className="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50">
