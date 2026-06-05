@@ -61,18 +61,18 @@ export default function ExpenseTracker() {
     await loadComments(vendorId)
   }
 
-  const getAutoStatus = (totalAmount, totalPaid) => {
-    if (totalPaid <= 0) return 'Booked'
-    if (totalPaid >= totalAmount) return 'Fully Paid'
-    return 'Deposit Paid'
-  }
-
   const getVendorTotalPaid = (vendorId) => {
     return (payments[vendorId] || []).filter(p => p.payment_type !== 'Add-on').reduce((s, p) => s + p.amount, 0)
   }
 
   const getVendorAddons = (vendorId) => {
     return (payments[vendorId] || []).filter(p => p.payment_type === 'Add-on').reduce((s, p) => s + p.amount, 0)
+  }
+
+  const getAutoStatus = (totalAmount, totalPaid) => {
+    if (totalPaid <= 0) return 'Booked'
+    if (totalPaid >= totalAmount) return 'Fully Paid'
+    return 'Deposit Paid'
   }
 
   const addVendor = async () => {
@@ -156,33 +156,33 @@ export default function ExpenseTracker() {
   }
 
   const filteredVendors = vendors.filter(v => tab === 'my' ? !v.is_shared : v.is_shared)
-
-  // Summary calculations
   const allSharedVendors = vendors.filter(v => v.is_shared)
   const allMyVendors = vendors.filter(v => !v.is_shared)
 
-  const totalExpenses = vendors.reduce((sum, v) => sum + v.total_amount + getVendorAddons(v.id), 0)
-
-  const paidByChosson = vendors.reduce((sum, v) => {
+  // My Expenses summary
+  const myPrivateTotal = allMyVendors.reduce((s, v) => s + v.total_amount, 0)
+  const mySharedTotal = allSharedVendors.reduce((s, v) => s + (v.total_amount * v.split_chosson / 100), 0)
+  const myTotalResponsibility = myPrivateTotal + mySharedTotal
+  const myTotalPaid = vendors.reduce((sum, v) => {
     const vp = payments[v.id] || []
     return sum + vp.filter(p => p.paid_by === familyNames.chosson && p.is_paid).reduce((s, p) => s + p.amount, 0)
   }, 0)
+  const myStillOwe = myTotalResponsibility - myTotalPaid
 
-  const paidByKallah = vendors.reduce((sum, v) => {
+  // Shared Expenses summary
+  const sharedTotal = allSharedVendors.reduce((s, v) => s + v.total_amount, 0)
+  const chossonShare = allSharedVendors.reduce((s, v) => s + (v.total_amount * v.split_chosson / 100), 0)
+  const kallaShare = allSharedVendors.reduce((s, v) => s + (v.total_amount * v.split_kallah / 100), 0)
+  const paidByChosson = allSharedVendors.reduce((sum, v) => {
+    const vp = payments[v.id] || []
+    return sum + vp.filter(p => p.paid_by === familyNames.chosson && p.is_paid).reduce((s, p) => s + p.amount, 0)
+  }, 0)
+  const paidByKallah = allSharedVendors.reduce((sum, v) => {
     const vp = payments[v.id] || []
     return sum + vp.filter(p => p.paid_by === familyNames.kallah && p.is_paid).reduce((s, p) => s + p.amount, 0)
   }, 0)
-
-  const chossonShare = allMyVendors.reduce((s, v) => s + v.total_amount, 0) +
-    allSharedVendors.reduce((s, v) => s + (v.total_amount * v.split_chosson / 100), 0)
-
-  const kallaShare = allSharedVendors.reduce((s, v) => s + (v.total_amount * v.split_kallah / 100), 0)
-
-  const chossonOwes = chossonShare - paidByChosson
-  const kallaOwes = kallaShare - paidByKallah
-  const netBalance = paidByChosson - paidByKallah
-  const chossonShouldPay = allSharedVendors.reduce((s, v) => s + (v.total_amount * v.split_chosson / 100), 0)
-  const netOwed = paidByChosson - chossonShouldPay
+  const chossonBalance = paidByChosson - chossonShare
+  const kallaBalance = paidByKallah - kallaShare
 
   const getStatusColor = (status) => {
     if (status === 'Fully Paid') return 'bg-green-100 text-green-700'
@@ -207,7 +207,6 @@ export default function ExpenseTracker() {
         <button onClick={() => setShowFamilySetup(true)} className="text-blue-200 text-sm hover:text-white">⚙️ Family Names</button>
       </div>
 
-      {/* Family Setup Modal */}
       {showFamilySetup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl">
@@ -234,51 +233,86 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
-        {/* Summary */}
-        <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
-          <h3 className="font-bold text-blue-900 mb-4">Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">Total Expenses</p>
-              <p className="text-xl font-bold text-blue-900">${totalExpenses.toLocaleString()}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">Paid by {familyNames.chosson}</p>
-              <p className="text-xl font-bold text-green-600">${paidByChosson.toLocaleString()}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">Paid by {familyNames.kallah}</p>
-              <p className="text-xl font-bold text-green-600">${paidByKallah.toLocaleString()}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-500 text-xs mb-1">Balance</p>
-              {netOwed > 0 ? (
-                <p className="text-xl font-bold text-red-500">{familyNames.kallah} owes {familyNames.chosson} ${Math.abs(netOwed).toLocaleString()}</p>
-              ) : netOwed < 0 ? (
-                <p className="text-xl font-bold text-red-500">{familyNames.chosson} owes {familyNames.kallah} ${Math.abs(netOwed).toLocaleString()}</p>
-              ) : (
-                <p className="text-xl font-bold text-green-600">All settled ✓</p>
-              )}
-            </div>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div className="bg-blue-900 h-3 rounded-full transition-all" style={{ width: `${totalExpenses > 0 ? ((paidByChosson + paidByKallah) / totalExpenses) * 100 : 0}%` }}></div>
-          </div>
-          <p className="text-xs text-gray-400 mt-1 text-right">{totalExpenses > 0 ? Math.round(((paidByChosson + paidByKallah) / totalExpenses) * 100) : 0}% paid</p>
-        </div>
-
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
           <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>
         </div>
 
+        {/* My Expenses Summary */}
+        {tab === 'my' && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+            <h3 className="font-bold text-blue-900 mb-4">My Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">My Private Expenses</p>
+                <p className="text-xl font-bold text-blue-900">${myPrivateTotal.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">My Share of Shared</p>
+                <p className="text-xl font-bold text-blue-900">${mySharedTotal.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">I Paid</p>
+                <p className="text-xl font-bold text-green-600">${myTotalPaid.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">I Still Owe</p>
+                <p className="text-xl font-bold text-red-500">${myStillOwe > 0 ? myStillOwe.toLocaleString() : '0'}</p>
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-lg px-4 py-2 text-sm text-center">
+              <span className="text-gray-500">My Total Responsibility: </span>
+              <span className="font-bold text-blue-900">${myTotalResponsibility.toLocaleString()}</span>
+            </div>
+            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-blue-900 h-2 rounded-full transition-all" style={{ width: `${myTotalResponsibility > 0 ? (myTotalPaid / myTotalResponsibility) * 100 : 0}%` }}></div>
+            </div>
+            <p className="text-xs text-gray-400 mt-1 text-right">{myTotalResponsibility > 0 ? Math.round((myTotalPaid / myTotalResponsibility) * 100) : 0}% paid</p>
+          </div>
+        )}
+
+        {/* Shared Expenses Summary */}
+        {tab === 'shared' && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+            <h3 className="font-bold text-blue-900 mb-4">Shared Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">Total Shared Expenses</p>
+                <p className="text-xl font-bold text-blue-900">${sharedTotal.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">{familyNames.chosson} Share</p>
+                <p className="text-xl font-bold text-blue-900">${chossonShare.toLocaleString()}</p>
+                <p className="text-xs text-green-600">Paid: ${paidByChosson.toLocaleString()}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">{familyNames.kallah} Share</p>
+                <p className="text-xl font-bold text-blue-900">${kallaShare.toLocaleString()}</p>
+                <p className="text-xs text-green-600">Paid: ${paidByKallah.toLocaleString()}</p>
+              </div>
+            </div>
+            {(paidByChosson > 0 || paidByKallah > 0) && (
+              <div className={`rounded-lg px-4 py-3 text-sm text-center font-semibold ${chossonBalance < 0 ? 'bg-red-50 text-red-600' : kallaBalance < 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                {chossonBalance < 0
+                  ? `${familyNames.chosson} owes ${familyNames.kallah} $${Math.abs(chossonBalance).toLocaleString()}`
+                  : kallaBalance < 0
+                  ? `${familyNames.kallah} owes ${familyNames.chosson} $${Math.abs(kallaBalance).toLocaleString()}`
+                  : '✓ All settled'}
+              </div>
+            )}
+            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-blue-900 h-2 rounded-full transition-all" style={{ width: `${sharedTotal > 0 ? ((paidByChosson + paidByKallah) / sharedTotal) * 100 : 0}%` }}></div>
+            </div>
+            <p className="text-xs text-gray-400 mt-1 text-right">{sharedTotal > 0 ? Math.round(((paidByChosson + paidByKallah) / sharedTotal) * 100) : 0}% paid</p>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-blue-900">{filteredVendors.length} {tab === 'my' ? 'Private' : 'Shared'} Expenses</h3>
           <button onClick={() => setShowAddVendor(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Add Vendor</button>
         </div>
 
-        {/* Add Vendor Modal */}
         {showAddVendor && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
             <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl my-8">
@@ -320,7 +354,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Vendor List */}
         <div className="space-y-3">
           {filteredVendors.length === 0 && <div className="bg-white rounded-2xl border p-8 text-center text-gray-400">No expenses yet. Click + Add Vendor to get started!</div>}
           {filteredVendors.map(vendor => {
@@ -334,29 +367,25 @@ export default function ExpenseTracker() {
             return (
               <div key={vendor.id} className={`bg-white rounded-2xl border shadow-sm ${hasDueSoon ? 'border-red-300' : ''}`}>
                 <div className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-gray-50 rounded-2xl" onClick={() => toggleExpand(vendor.id)}>
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-gray-800">{vendor.name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusColor(vendor.status)}`}>{vendor.status}</span>
-                        {hasDueSoon && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">⚠️ Due Soon</span>}
-                      </div>
-                      <p className="text-xs text-gray-400">{vendor.category}{vendor.vendor_contact ? ` · ${vendor.vendor_contact}` : ''}{vendor.vendor_phone ? ` · ${vendor.vendor_phone}` : ''}</p>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-gray-800">{vendor.name}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusColor(vendor.status)}`}>{vendor.status}</span>
+                      {hasDueSoon && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">⚠️ Due Soon</span>}
                     </div>
+                    <p className="text-xs text-gray-400">{vendor.category}{vendor.vendor_contact ? ` · ${vendor.vendor_contact}` : ''}{vendor.vendor_phone ? ` · ${vendor.vendor_phone}` : ''}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="font-bold text-blue-900">${revisedTotal.toLocaleString()}</p>
                       <p className="text-xs text-gray-400">${vendorPaid.toLocaleString()} paid</p>
                     </div>
-                    <span className="text-gray-400 text-lg">{isExpanded ? '▲' : '▼'}</span>
+                    <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
                   </div>
                 </div>
 
                 {isExpanded && (
                   <div className="border-t px-6 py-4 space-y-5">
-
-                    {/* Shared split */}
                     {vendor.is_shared && (
                       <div className="bg-blue-50 rounded-lg p-4">
                         <p className="text-sm font-semibold text-blue-900 mb-2">Split</p>
@@ -375,7 +404,6 @@ export default function ExpenseTracker() {
 
                     {vendor.notes && <p className="text-sm text-gray-600 italic">📝 {vendor.notes}</p>}
 
-                    {/* File upload */}
                     <div>
                       <p className="text-sm font-bold text-blue-900 mb-2">Documents</p>
                       {vendor.receipt_url && <a href={vendor.receipt_url} target="_blank" className="text-sm text-blue-600 hover:underline block mb-2">📎 View Uploaded Document</a>}
@@ -392,7 +420,6 @@ export default function ExpenseTracker() {
                       </div>
                     </div>
 
-                    {/* Payments */}
                     <div>
                       <p className="text-sm font-bold text-blue-900 mb-2">Payments</p>
                       {vPayments.length === 0 && <p className="text-xs text-gray-400 mb-2">No payments added yet.</p>}
@@ -412,7 +439,6 @@ export default function ExpenseTracker() {
                         </div>
                       ))}
 
-                      {/* Add Payment Form */}
                       <div className="mt-3 bg-gray-50 rounded-lg p-4 space-y-3">
                         <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add Payment</p>
                         <div className="grid grid-cols-2 gap-2">
@@ -453,7 +479,6 @@ export default function ExpenseTracker() {
                       </div>
                     </div>
 
-                    {/* Comments */}
                     <div>
                       <p className="text-sm font-bold text-blue-900 mb-2">Comments</p>
                       {(comments[vendor.id] || []).length === 0 && <p className="text-xs text-gray-400 mb-2">No comments yet.</p>}
