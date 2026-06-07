@@ -137,13 +137,14 @@ export default function ExpenseTracker() {
     return 'Deposit Paid'
   }
 
-  const exportPDF = async () => {
+  const exportPDF = async (type) => {
     await loadAllPayments(vendors)
     const printWindow = window.open('', '_blank')
+    const isSharedOnly = type === 'shared'
     const html = `
       <html>
       <head>
-        <title>SimchaPro Expense Report</title>
+        <title>SimchaPro ${isSharedOnly ? 'Shared Expense Report' : 'Full Expense Report'}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
           h1 { color: #1a3c8f; text-align: center; margin-bottom: 5px; }
@@ -155,18 +156,23 @@ export default function ExpenseTracker() {
           .balance { font-size: 15px; font-weight: bold; color: #c00; margin: 10px 0 0; }
           .settled { font-size: 15px; font-weight: bold; color: green; margin: 10px 0 0; }
           .vendor-header { background: #e8edf8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+          .private-vendor-header { background: #e8f5e8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
           .subtitle { text-align: center; color: #666; margin: 3px 0; }
+          .notice { background: #fff3cd; padding: 8px 15px; border-radius: 6px; text-align: center; font-size: 12px; color: #856404; margin: 10px 0; }
           .print-btn { position: fixed; top: 20px; right: 20px; background: #1a3c8f; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
           @media print { .print-btn { display: none; } }
         </style>
       </head>
       <body>
         <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
-        <h1>SimchaPro — Expense Report</h1>
+        <h1>SimchaPro — ${isSharedOnly ? 'Shared Expense Report' : 'Full Expense Report'}</h1>
         <p class="subtitle">${chossonName} & ${kallaName}</p>
         <p class="subtitle">Generated: ${new Date().toLocaleDateString()}</p>
+        ${isSharedOnly
+          ? '<p class="notice">📋 This report contains shared expenses only — prepared for both families</p>'
+          : '<p class="notice">🔒 Confidential — For personal use only — includes private expenses</p>'}
 
-        <h2>Summary</h2>
+        <h2>Shared Expenses Summary</h2>
         <div class="summary-box">
           <table>
             <tr><th></th><th>${chossonName}</th><th>${kallaName}</th><th>Total</th></tr>
@@ -174,7 +180,7 @@ export default function ExpenseTracker() {
             <tr><td>Amount Paid</td><td>$${paidByChosson.toLocaleString()}</td><td>$${paidByKalla.toLocaleString()}</td><td>$${(paidByChosson + paidByKalla).toLocaleString()}</td></tr>
             <tr><td>Still Owes to Vendor</td><td>$${Math.max(0, chossonShare - paidByChosson).toLocaleString()}</td><td>$${Math.max(0, kallaShare - paidByKalla).toLocaleString()}</td><td></td></tr>
           </table>
-          <p class="${chossonBalance > 0 || kallaBalance > 0 ? 'balance' : 'settled'}">${chossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}` : kallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}` : '✓ All settled'}</p>
+          <p class="${chossonBalance > 0 || kallaBalance > 0 ? 'balance' : 'settled'}">${chossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}` : kallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}` : '✓ All settled between families'}</p>
         </div>
 
         <h2>Shared Expenses — Detail</h2>
@@ -200,13 +206,13 @@ export default function ExpenseTracker() {
           `
         }).join('')}
 
-        ${allMyVendors.length > 0 ? `
+        ${!isSharedOnly && allMyVendors.length > 0 ? `
         <h2>${myFamilyName} — Private Expenses</h2>
         ${allMyVendors.map(vendor => {
           const revisedTotal = getVendorRevisedTotal(vendor)
           const vPayments = payments[vendor.id] || []
           return `
-            <div class="vendor-header">${vendor.name} &nbsp;|&nbsp; ${vendor.category} &nbsp;|&nbsp; For: ${vendor.occasion || 'General'} &nbsp;|&nbsp; Total: $${revisedTotal.toLocaleString()}</div>
+            <div class="private-vendor-header">${vendor.name} &nbsp;|&nbsp; ${vendor.category} &nbsp;|&nbsp; For: ${vendor.occasion || 'General'} &nbsp;|&nbsp; Total: $${revisedTotal.toLocaleString()}</div>
             <table>
               <tr><th>Type</th><th>Amount</th><th>Paid By</th><th>Method</th><th>Date</th><th>Check Date</th><th>Note</th></tr>
               ${vPayments.length > 0 ? vPayments.map(p => `
@@ -427,10 +433,13 @@ export default function ExpenseTracker() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-blue-900 text-white px-8 py-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
-          <button onClick={exportPDF} className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
-            📄 Export PDF
+          <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
+            📄 Shared Report
+          </button>
+          <button onClick={() => exportPDF('full')} className="bg-yellow-400 text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300">
+            📄 My Full Report
           </button>
         </div>
       </div>
