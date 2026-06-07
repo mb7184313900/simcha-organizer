@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
-const CATEGORIES = ['Hall', 'Catering', 'Music', 'Photography', 'Flowers', 'Clothing', 'Invitations', 'Transportation', 'Other']
+const DEFAULT_CATEGORIES = ['Hall', 'Catering', 'Music', 'Photography', 'Flowers', 'Clothing', 'Invitations', 'Transportation', 'Other']
+const DEFAULT_OCCASIONS = ['Shadchen', 'Lchaim/Vort', 'Tenaim', 'Aufruf', 'Wedding', 'Shabbos Sheva Brachos', 'Sheva Brachos', 'Gifts', 'Apartment', 'Furniture', 'General']
 const PAYMENT_METHODS = ['Cash', 'Check', 'Zelle', 'Wire Transfer', 'Credit Card', 'Other']
 
 export default function ExpenseTracker() {
   const [user, setUser] = useState(null)
   const [tab, setTab] = useState('my')
   const [sortBy, setSortBy] = useState('name')
+  const [filterOccasion, setFilterOccasion] = useState('All')
   const [vendors, setVendors] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddVendor, setShowAddVendor] = useState(false)
@@ -27,12 +29,21 @@ export default function ExpenseTracker() {
   const [newAddon, setNewAddon] = useState({})
   const [successMessage, setSuccessMessage] = useState('')
   const [uploadingFor, setUploadingFor] = useState(null)
+  const [customCategories, setCustomCategories] = useState([])
+  const [customOccasions, setCustomOccasions] = useState([])
+  const [newCustomCategory, setNewCustomCategory] = useState('')
+  const [newCustomOccasion, setNewCustomOccasion] = useState('')
+  const [showAddCategory, setShowAddCategory] = useState(false)
+  const [showAddOccasion, setShowAddOccasion] = useState(false)
   const [newVendor, setNewVendor] = useState({
-    name: '', category: 'Hall', total_amount: '', is_shared: false,
+    name: '', category: 'Hall', occasion: 'General', total_amount: '', is_shared: false,
     split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '',
     notes: '', receipt_url: ''
   })
   const router = useRouter()
+
+  const allCategories = [...DEFAULT_CATEGORIES, ...customCategories]
+  const allOccasions = [...DEFAULT_OCCASIONS, ...customOccasions]
 
   const showSuccess = (msg) => {
     setSuccessMessage(msg)
@@ -47,6 +58,8 @@ export default function ExpenseTracker() {
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).single()
       if (fs) {
         setFamilySettings(fs)
+        if (fs.custom_categories) setCustomCategories(JSON.parse(fs.custom_categories))
+        if (fs.custom_occasions) setCustomOccasions(JSON.parse(fs.custom_occasions))
         await loadVendors(user.id)
       } else {
         setShowFamilySetup(true)
@@ -62,6 +75,24 @@ export default function ExpenseTracker() {
     setFamilySettings(data[0])
     setShowFamilySetup(false)
     await loadVendors(user.id)
+  }
+
+  const addCustomCategory = async () => {
+    if (!newCustomCategory.trim()) return
+    const updated = [...customCategories, newCustomCategory.trim()]
+    setCustomCategories(updated)
+    await supabase.from('family_settings').update({ custom_categories: JSON.stringify(updated) }).eq('user_id', user.id)
+    setNewCustomCategory('')
+    setShowAddCategory(false)
+  }
+
+  const addCustomOccasion = async () => {
+    if (!newCustomOccasion.trim()) return
+    const updated = [...customOccasions, newCustomOccasion.trim()]
+    setCustomOccasions(updated)
+    await supabase.from('family_settings').update({ custom_occasions: JSON.stringify(updated) }).eq('user_id', user.id)
+    setNewCustomOccasion('')
+    setShowAddOccasion(false)
   }
 
   const loadVendors = async (userId) => {
@@ -119,13 +150,14 @@ export default function ExpenseTracker() {
     }).select()
     setVendors(prev => [...prev, data[0]])
     setShowAddVendor(false)
-    setNewVendor({ name: '', category: 'Hall', total_amount: '', is_shared: false, split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '', notes: '', receipt_url: '' })
+    setNewVendor({ name: '', category: 'Hall', occasion: 'General', total_amount: '', is_shared: false, split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '', notes: '', receipt_url: '' })
     showSuccess('✓ Vendor added successfully!')
   }
 
   const updateVendor = async (vendor) => {
     await supabase.from('vendors').update({
-      name: vendor.name, category: vendor.category, total_amount: parseFloat(vendor.total_amount),
+      name: vendor.name, category: vendor.category, occasion: vendor.occasion,
+      total_amount: parseFloat(vendor.total_amount),
       vendor_phone: vendor.vendor_phone, vendor_contact: vendor.vendor_contact,
       notes: vendor.notes, split_chosson: parseFloat(vendor.split_chosson), split_kallah: parseFloat(vendor.split_kallah)
     }).eq('id', vendor.id)
@@ -189,8 +221,7 @@ export default function ExpenseTracker() {
     const updatedPayments = [...(payments[vendor.id] || []), data[0]]
     setPayments(prev => ({ ...prev, [vendor.id]: updatedPayments }))
     const newRevisedTotal = vendor.total_amount + updatedPayments.filter(p => p.payment_type === 'Add-on').reduce((s, p) => s + p.amount, 0)
-    const newTotalPaid = getVendorTotalPaid(vendor.id)
-    const newStatus = getAutoStatus(newRevisedTotal, newTotalPaid)
+    const newStatus = getAutoStatus(newRevisedTotal, getVendorTotalPaid(vendor.id))
     await supabase.from('vendors').update({ status: newStatus }).eq('id', vendor.id)
     setVendors(prev => prev.map(v => v.id === vendor.id ? { ...v, status: newStatus } : v))
     setNewAddon(prev => ({ ...prev, [vendor.id]: {} }))
@@ -234,10 +265,15 @@ export default function ExpenseTracker() {
     if (sortBy === 'price') return b.total_amount - a.total_amount
     if (sortBy === 'status') return a.status.localeCompare(b.status)
     if (sortBy === 'category') return a.category.localeCompare(b.category)
+    if (sortBy === 'occasion') return (a.occasion || '').localeCompare(b.occasion || '')
     return 0
   })
 
-  const filteredVendors = getSortedVendors(vendors.filter(v => tab === 'my' ? !v.is_shared : v.is_shared))
+  const baseFilteredVendors = vendors.filter(v => tab === 'my' ? !v.is_shared : v.is_shared)
+  const filteredVendors = getSortedVendors(
+    filterOccasion === 'All' ? baseFilteredVendors : baseFilteredVendors.filter(v => v.occasion === filterOccasion)
+  )
+
   const allSharedVendors = vendors.filter(v => v.is_shared)
   const allMyVendors = vendors.filter(v => !v.is_shared)
 
@@ -254,6 +290,13 @@ export default function ExpenseTracker() {
   const paidByKalla = allSharedVendors.reduce((sum, v) => sum + (payments[v.id] || []).filter(p => p.paid_by === kallaName && p.is_paid).reduce((s, p) => s + p.amount, 0), 0)
   const chossonBalance = paidByChosson - chossonShare
   const kallaBalance = paidByKalla - kallaShare
+
+  // Occasion breakdown
+  const occasionTotals = allOccasions.map(occ => {
+    const occVendors = vendors.filter(v => v.occasion === occ)
+    const total = occVendors.reduce((s, v) => s + getVendorRevisedTotal(v), 0)
+    return { occ, total, count: occVendors.length }
+  }).filter(x => x.total > 0)
 
   const getStatusColor = (s) => s === 'Fully Paid' ? 'bg-green-100 text-green-700' : s === 'Deposit Paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
   const getPaymentTypeColor = (t) => t === 'Full Payment' ? 'bg-green-100 text-green-700' : t === 'Partial Payment' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'
@@ -308,8 +351,10 @@ export default function ExpenseTracker() {
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
           <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>
           <button onClick={async () => { setTab('checks'); await loadAllPayments(vendors) }} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'checks' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📋 Check Tracker</button>
+          <button onClick={() => setTab('breakdown')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'breakdown' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📊 Breakdown</button>
         </div>
 
+        {/* Check Tracker */}
         {tab === 'checks' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6">
             <h3 className="font-bold text-blue-900 mb-4">All Post-Dated Checks</h3>
@@ -329,6 +374,33 @@ export default function ExpenseTracker() {
           </div>
         )}
 
+        {/* Breakdown by Occasion */}
+        {tab === 'breakdown' && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6">
+            <h3 className="font-bold text-blue-900 mb-6">Expense Breakdown by "For"</h3>
+            {occasionTotals.length === 0 && <p className="text-gray-400 text-sm text-center py-8">No expenses yet.</p>}
+            <div className="space-y-3">
+              {occasionTotals.map(({ occ, total, count }) => (
+                <div key={occ} className="flex items-center justify-between py-3 border-b">
+                  <div>
+                    <p className="font-semibold text-gray-800">{occ}</p>
+                    <p className="text-xs text-gray-400">{count} vendor{count !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-blue-900">${total.toLocaleString()}</p>
+                    <button onClick={() => { setTab('my'); setFilterOccasion(occ) }} className="text-xs text-blue-600 hover:underline">View expenses →</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 pt-4 border-t flex justify-between">
+              <span className="font-bold text-gray-700">Total All Expenses</span>
+              <span className="font-bold text-blue-900">${vendors.reduce((s, v) => s + getVendorRevisedTotal(v), 0).toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+
+        {/* My Expenses Summary */}
         {tab === 'my' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
             <h3 className="font-bold text-blue-900 mb-4">My Summary</h3>
@@ -361,6 +433,7 @@ export default function ExpenseTracker() {
           </div>
         )}
 
+        {/* Shared Expenses Summary */}
         {tab === 'shared' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
             <h3 className="font-bold text-blue-900 mb-4">Shared Summary</h3>
@@ -398,12 +471,17 @@ export default function ExpenseTracker() {
           <>
             <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
               <h3 className="font-bold text-blue-900">{filteredVendors.length} {tab === 'my' ? 'Private' : 'Shared'} Expenses</h3>
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center flex-wrap">
+                <select value={filterOccasion} onChange={e => setFilterOccasion(e.target.value)} className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="All">All Occasions</option>
+                  {allOccasions.map(o => <option key={o}>{o}</option>)}
+                </select>
                 <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="name">Sort: Name</option>
                   <option value="price">Sort: Price</option>
                   <option value="status">Sort: Status</option>
                   <option value="category">Sort: Category</option>
+                  <option value="occasion">Sort: For</option>
                 </select>
                 <button onClick={() => setShowAddVendor(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Add Vendor</button>
               </div>
@@ -415,9 +493,39 @@ export default function ExpenseTracker() {
                   <h3 className="text-xl font-bold text-blue-900 mb-6">Add Vendor</h3>
                   <div className="space-y-3">
                     <input placeholder="Vendor name *" value={newVendor.name} onChange={e => setNewVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                    </select>
+
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Category</label>
+                      <div className="flex gap-2">
+                        <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          {allCategories.map(c => <option key={c}>{c}</option>)}
+                        </select>
+                        <button onClick={() => setShowAddCategory(true)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                      </div>
+                      {showAddCategory && (
+                        <div className="flex gap-2 mt-2">
+                          <input placeholder="New category name" value={newCustomCategory} onChange={e => setNewCustomCategory(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <button onClick={addCustomCategory} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">For</label>
+                      <div className="flex gap-2">
+                        <select value={newVendor.occasion} onChange={e => setNewVendor(p => ({ ...p, occasion: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          {allOccasions.map(o => <option key={o}>{o}</option>)}
+                        </select>
+                        <button onClick={() => setShowAddOccasion(true)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                      </div>
+                      {showAddOccasion && (
+                        <div className="flex gap-2 mt-2">
+                          <input placeholder="New occasion name" value={newCustomOccasion} onChange={e => setNewCustomOccasion(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <button onClick={addCustomOccasion} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                        </div>
+                      )}
+                    </div>
+
                     <input placeholder="Total contracted price *" type="number" value={newVendor.total_amount} onChange={e => setNewVendor(p => ({ ...p, total_amount: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <input placeholder="Vendor phone" value={newVendor.vendor_phone} onChange={e => setNewVendor(p => ({ ...p, vendor_phone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <input placeholder="Contact name" value={newVendor.vendor_contact} onChange={e => setNewVendor(p => ({ ...p, vendor_contact: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -470,6 +578,7 @@ export default function ExpenseTracker() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-gray-800">{vendor.name}</p>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusColor(vendor.status)}`}>{vendor.status}</span>
+                          {vendor.occasion && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{vendor.occasion}</span>}
                           {hasDueSoon && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">⚠️ Due Soon</span>}
                         </div>
                         <p className="text-xs text-gray-400">{vendor.category}{vendor.vendor_contact ? ` · ${vendor.vendor_contact}` : ''}{vendor.vendor_phone ? ` · ${vendor.vendor_phone}` : ''}</p>
@@ -491,6 +600,12 @@ export default function ExpenseTracker() {
                             <p className="text-sm font-bold text-blue-900">Edit Vendor</p>
                             <input value={editingVendor.name} onChange={e => setEditingVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Vendor name" />
                             <input value={editingVendor.total_amount} type="number" onChange={e => setEditingVendor(p => ({ ...p, total_amount: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Total contracted price" />
+                            <select value={editingVendor.category} onChange={e => setEditingVendor(p => ({ ...p, category: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                              {allCategories.map(c => <option key={c}>{c}</option>)}
+                            </select>
+                            <select value={editingVendor.occasion || 'General'} onChange={e => setEditingVendor(p => ({ ...p, occasion: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                              {allOccasions.map(o => <option key={o}>{o}</option>)}
+                            </select>
                             <input value={editingVendor.vendor_phone || ''} onChange={e => setEditingVendor(p => ({ ...p, vendor_phone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Phone" />
                             <input value={editingVendor.vendor_contact || ''} onChange={e => setEditingVendor(p => ({ ...p, vendor_contact: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contact name" />
                             <textarea value={editingVendor.notes || ''} onChange={e => setEditingVendor(p => ({ ...p, notes: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} placeholder="Notes" />
@@ -555,7 +670,7 @@ export default function ExpenseTracker() {
                                       {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
                                     </select>
                                     <input type="date" value={editingPayment.paid_date || ''} onChange={e => setEditingPayment(x => ({ ...x, paid_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
-                                    <input type="date" value={editingPayment.due_date || ''} onChange={e => setEditingPayment(x => ({ ...x, due_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" placeholder="Due date" />
+                                    <input type="date" value={editingPayment.due_date || ''} onChange={e => setEditingPayment(x => ({ ...x, due_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
                                     {editingPayment.payment_method === 'Check' && (
                                       <input type="date" value={editingPayment.check_date || ''} onChange={e => setEditingPayment(x => ({ ...x, check_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
                                     )}
