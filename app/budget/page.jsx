@@ -451,32 +451,11 @@ export default function ExpenseTracker() {
         <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
-          <button onClick={generateShareLink} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">
-            🔗 Share Link
-          </button>
           <button onClick={generateShareLink} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">🔗 Share Link</button>
-          <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
-            📄 Shared Report
-          </button>
-          <button onClick={() => exportPDF('full')} className="bg-yellow-400 text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300">
-            📄 My Full Report
-          </button>
+          <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">📄 Shared Report</button>
+          <button onClick={() => exportPDF('full')} className="bg-yellow-400 text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300">📄 My Full Report</button>
         </div>
       </div>
-
-      {showShareLink && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl">
-            <h3 className="text-xl font-bold text-blue-900 mb-4">Share Link Generated! 🔗</h3>
-            <p className="text-gray-500 text-sm mb-4">Send this link to the other family. They can view shared expenses and add comments.</p>
-            <div className="bg-gray-50 rounded-lg p-3 mb-4 break-all text-sm text-blue-900 font-mono">{shareLink}</div>
-            <div className="flex gap-3">
-              <button onClick={() => { navigator.clipboard.writeText(shareLink); showSuccess('✓ Link copied!') }} className="flex-1 bg-blue-900 text-white py-2 rounded-lg font-semibold">Copy Link</button>
-              <button onClick={() => setShowShareLink(false)} className="flex-1 border py-2 rounded-lg text-gray-600">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showShareLink && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -867,7 +846,7 @@ export default function ExpenseTracker() {
                               </div>
                               <div>
                                 <label className="text-xs text-gray-500 block mb-1">Date paid (optional)</label>
-                                <input type="date" value={newPayment[vendor.id]?.paid_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], paid_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                <input type="date" value={newPayment[vendor.id]?.paid_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], paid_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:focus:ring-1 focus:ring-blue-500" />
                               </div>
                             </div>
                             {newPayment[vendor.id]?.payment_method === 'Check' && (
