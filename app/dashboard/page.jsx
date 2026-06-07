@@ -47,7 +47,7 @@ export default function Dashboard() {
 
           <div onClick={() => router.push('/budget')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
             <div className="text-5xl mb-4">💰</div>
-            <h3 className="text-xl font-bold text-blue-900 mb-2">Budget Organizer</h3>
+            <h3 className="text-xl font-bold text-blue-900 mb-2">Expense Tracker</h3>
             <p className="text-gray-500 text-sm">Track shared expenses between both families and stay on budget</p>
           </div>
 
