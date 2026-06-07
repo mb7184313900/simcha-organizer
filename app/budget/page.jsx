@@ -454,6 +454,7 @@ export default function ExpenseTracker() {
           <button onClick={generateShareLink} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">
             🔗 Share Link
           </button>
+          <button onClick={generateShareLink} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">🔗 Share Link</button>
           <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
             📄 Shared Report
           </button>
