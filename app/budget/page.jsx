@@ -35,6 +35,7 @@ export default function ExpenseTracker() {
   const [newCustomOccasion, setNewCustomOccasion] = useState('')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddOccasion, setShowAddOccasion] = useState(false)
+  const [exportingPDF, setExportingPDF] = useState(false)
   const [newVendor, setNewVendor] = useState({
     name: '', category: 'Hall', occasion: 'General', total_amount: '', is_shared: false,
     split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '',
@@ -135,6 +136,133 @@ export default function ExpenseTracker() {
     if (totalPaid <= 0) return 'Booked'
     if (totalPaid >= revisedTotal) return 'Fully Paid'
     return 'Deposit Paid'
+  }
+
+  const exportPDF = async () => {
+    setExportingPDF(true)
+    await loadAllPayments(vendors)
+    const jsPDFModule = (await import('jspdf')).default
+    await import('jspdf-autotable')
+    const doc = new jsPDFModule()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    let y = 20
+
+    doc.setFontSize(20)
+    doc.setTextColor(26, 60, 143)
+    doc.text('SimchaPro — Expense Report', pageWidth / 2, y, { align: 'center' })
+    y += 10
+    doc.setFontSize(11)
+    doc.setTextColor(100, 100, 100)
+    doc.text(`${chossonName} & ${kallaName}`, pageWidth / 2, y, { align: 'center' })
+    y += 6
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, y, { align: 'center' })
+    y += 12
+
+    doc.setFontSize(13)
+    doc.setTextColor(26, 60, 143)
+    doc.text('Summary', 14, y)
+    y += 7
+
+    doc.autoTable({
+      startY: y,
+      head: [['', chossonName, kallaName, 'Total']],
+      body: [
+        ['Share of Shared Expenses', `$${chossonShare.toLocaleString()}`, `$${kallaShare.toLocaleString()}`, `$${sharedTotal.toLocaleString()}`],
+        ['Amount Paid', `$${paidByChosson.toLocaleString()}`, `$${paidByKalla.toLocaleString()}`, `$${(paidByChosson + paidByKalla).toLocaleString()}`],
+        ['Still Owes to Vendor', `$${Math.max(0, chossonShare - paidByChosson).toLocaleString()}`, `$${Math.max(0, kallaShare - paidByKalla).toLocaleString()}`, ''],
+      ],
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [26, 60, 143] },
+    })
+    y = doc.lastAutoTable.finalY + 8
+
+    if (chossonBalance > 0) {
+      doc.setTextColor(200, 0, 0)
+      doc.setFontSize(11)
+      doc.text(`Balance: ${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}`, 14, y)
+    } else if (kallaBalance > 0) {
+      doc.setTextColor(200, 0, 0)
+      doc.setFontSize(11)
+      doc.text(`Balance: ${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}`, 14, y)
+    } else {
+      doc.setTextColor(0, 150, 0)
+      doc.setFontSize(11)
+      doc.text('Balance: All settled', 14, y)
+    }
+    y += 14
+
+    doc.setTextColor(26, 60, 143)
+    doc.setFontSize(13)
+    doc.text('Shared Expenses — Detail', 14, y)
+    y += 7
+
+    for (const vendor of allSharedVendors) {
+      const revisedTotal = getVendorRevisedTotal(vendor)
+      const vPayments = payments[vendor.id] || []
+      const rows = vPayments.map(p => [
+        p.payment_type || '',
+        `$${p.amount.toLocaleString()}`,
+        p.paid_by || '',
+        p.payment_method || '',
+        p.paid_date || p.due_date || '',
+        p.is_check && p.check_date ? `Check: ${p.check_date}` : '',
+        p.description || ''
+      ])
+      doc.autoTable({
+        startY: y,
+        head: [[`${vendor.name}  |  ${vendor.category}  |  For: ${vendor.occasion || 'General'}  |  Total: $${revisedTotal.toLocaleString()}  |  Split: ${vendor.split_chosson}% ${chossonName} / ${vendor.split_kallah}% ${kallaName}`, '', '', '', '', '', '']],
+        body: rows.length > 0 ? rows : [['No payments recorded', '', '', '', '', '', '']],
+        columns: [
+          { header: 'Type', dataKey: 0 },
+          { header: 'Amount', dataKey: 1 },
+          { header: 'Paid By', dataKey: 2 },
+          { header: 'Method', dataKey: 3 },
+          { header: 'Date', dataKey: 4 },
+          { header: 'Check', dataKey: 5 },
+          { header: 'Note', dataKey: 6 }
+        ],
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [200, 210, 240], textColor: [26, 60, 143] },
+      })
+      y = doc.lastAutoTable.finalY + 4
+      if (y > 260) { doc.addPage(); y = 20 }
+    }
+
+    if (allMyVendors.length > 0) {
+      if (y > 240) { doc.addPage(); y = 20 }
+      y += 4
+      doc.setTextColor(26, 60, 143)
+      doc.setFontSize(13)
+      doc.text(`${myFamilyName} — Private Expenses`, 14, y)
+      y += 7
+
+      for (const vendor of allMyVendors) {
+        const revisedTotal = getVendorRevisedTotal(vendor)
+        const vPayments = payments[vendor.id] || []
+        const rows = vPayments.map(p => [
+          p.payment_type || '',
+          `$${p.amount.toLocaleString()}`,
+          p.paid_by || '',
+          p.payment_method || '',
+          p.paid_date || p.due_date || '',
+          p.is_check && p.check_date ? `Check: ${p.check_date}` : '',
+          p.description || ''
+        ])
+        doc.autoTable({
+          startY: y,
+          head: [[`${vendor.name}  |  ${vendor.category}  |  For: ${vendor.occasion || 'General'}  |  Total: $${revisedTotal.toLocaleString()}`, '', '', '', '', '', '']],
+          body: rows.length > 0 ? rows : [['No payments recorded', '', '', '', '', '', '']],
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [220, 240, 220], textColor: [40, 80, 40] },
+        })
+        y = doc.lastAutoTable.finalY + 4
+        if (y > 260) { doc.addPage(); y = 20 }
+      }
+    }
+
+    doc.save(`SimchaPro-${chossonName}-${kallaName}-${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`)
+    setExportingPDF(false)
+    showSuccess('✓ PDF exported successfully!')
   }
 
   const addVendor = async () => {
@@ -291,7 +419,6 @@ export default function ExpenseTracker() {
   const chossonBalance = paidByChosson - chossonShare
   const kallaBalance = paidByKalla - kallaShare
 
-  // Occasion breakdown
   const occasionTotals = allOccasions.map(occ => {
     const occVendors = vendors.filter(v => v.occasion === occ)
     const total = occVendors.reduce((s, v) => s + getVendorRevisedTotal(v), 0)
@@ -334,7 +461,12 @@ export default function ExpenseTracker() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-blue-900 text-white px-8 py-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
-        <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
+          <button onClick={exportPDF} disabled={exportingPDF} className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 disabled:opacity-50">
+            {exportingPDF ? 'Generating...' : '📄 Export PDF'}
+          </button>
+        </div>
       </div>
 
       {successMessage && (
@@ -354,7 +486,6 @@ export default function ExpenseTracker() {
           <button onClick={() => setTab('breakdown')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'breakdown' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📊 Breakdown</button>
         </div>
 
-        {/* Check Tracker */}
         {tab === 'checks' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6">
             <h3 className="font-bold text-blue-900 mb-4">All Post-Dated Checks</h3>
@@ -374,7 +505,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Breakdown by Occasion */}
         {tab === 'breakdown' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6">
             <h3 className="font-bold text-blue-900 mb-6">Expense Breakdown by "For"</h3>
@@ -400,7 +530,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* My Expenses Summary */}
         {tab === 'my' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
             <h3 className="font-bold text-blue-900 mb-4">My Summary</h3>
@@ -433,7 +562,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Shared Expenses Summary */}
         {tab === 'shared' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
             <h3 className="font-bold text-blue-900 mb-4">Shared Summary</h3>
@@ -454,7 +582,7 @@ export default function ExpenseTracker() {
               </div>
             </div>
             {(paidByChosson > chossonShare || paidByKalla > kallaShare) && (
-              <div className={`rounded-lg px-4 py-3 text-sm text-center font-semibold ${chossonBalance > 0 ? 'bg-green-50 text-green-600' : kallaBalance > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+              <div className={`rounded-lg px-4 py-3 text-sm text-center font-semibold ${chossonBalance > 0 || kallaBalance > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
                 {chossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}`
                   : kallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}`
                   : '✓ All settled'}
@@ -493,14 +621,13 @@ export default function ExpenseTracker() {
                   <h3 className="text-xl font-bold text-blue-900 mb-6">Add Vendor</h3>
                   <div className="space-y-3">
                     <input placeholder="Vendor name *" value={newVendor.name} onChange={e => setNewVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">Category</label>
                       <div className="flex gap-2">
                         <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                           {allCategories.map(c => <option key={c}>{c}</option>)}
                         </select>
-                        <button onClick={() => setShowAddCategory(true)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                        <button onClick={() => setShowAddCategory(!showAddCategory)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
                       </div>
                       {showAddCategory && (
                         <div className="flex gap-2 mt-2">
@@ -509,14 +636,13 @@ export default function ExpenseTracker() {
                         </div>
                       )}
                     </div>
-
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">For</label>
                       <div className="flex gap-2">
                         <select value={newVendor.occasion} onChange={e => setNewVendor(p => ({ ...p, occasion: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                           {allOccasions.map(o => <option key={o}>{o}</option>)}
                         </select>
-                        <button onClick={() => setShowAddOccasion(true)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                        <button onClick={() => setShowAddOccasion(!showAddOccasion)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
                       </div>
                       {showAddOccasion && (
                         <div className="flex gap-2 mt-2">
@@ -525,7 +651,6 @@ export default function ExpenseTracker() {
                         </div>
                       )}
                     </div>
-
                     <input placeholder="Total contracted price *" type="number" value={newVendor.total_amount} onChange={e => setNewVendor(p => ({ ...p, total_amount: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <input placeholder="Vendor phone" value={newVendor.vendor_phone} onChange={e => setNewVendor(p => ({ ...p, vendor_phone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <input placeholder="Contact name" value={newVendor.vendor_contact} onChange={e => setNewVendor(p => ({ ...p, vendor_contact: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
