@@ -62,7 +62,7 @@ export default function ExpenseTracker() {
         setFamilySettings(fs)
         if (fs.custom_categories) setCustomCategories(JSON.parse(fs.custom_categories))
         if (fs.custom_occasions) setCustomOccasions(JSON.parse(fs.custom_occasions))
-        await loadVendors(user.id)
+        const vendorData = await loadVendors(user.id)
       } else {
         setShowFamilySetup(true)
       }
@@ -100,6 +100,12 @@ export default function ExpenseTracker() {
   const loadVendors = async (userId) => {
     const { data } = await supabase.from('vendors').select('*').eq('user_id', userId)
     setVendors(data || [])
+    const allPayments = {}
+    for (const v of (data || [])) {
+      const { data: p } = await supabase.from('payments').select('*').eq('vendor_id', v.id)
+      allPayments[v.id] = p || []
+    }
+    setPayments(allPayments)
   }
 
   const loadPayments = async (vendorId) => {
