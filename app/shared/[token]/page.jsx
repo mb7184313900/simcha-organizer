@@ -40,6 +40,12 @@ export default function SharedView() {
   const loadSharedData = async (ownerId) => {
     const { data } = await supabase.from('vendors').select('*').eq('user_id', ownerId).eq('is_shared', true)
     setVendors(data || [])
+    const allPayments = {}
+    for (const v of (data || [])) {
+      const { data: p } = await supabase.from('payments').select('*').eq('vendor_id', v.id)
+      allPayments[v.id] = p || []
+    }
+    setPayments(allPayments)
   }
 
   const loadPayments = async (vendorId) => {
