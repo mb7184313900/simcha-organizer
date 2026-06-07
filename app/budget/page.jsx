@@ -35,6 +35,8 @@ export default function ExpenseTracker() {
   const [newCustomOccasion, setNewCustomOccasion] = useState('')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddOccasion, setShowAddOccasion] = useState(false)
+  const [shareLink, setShareLink] = useState('')
+  const [showShareLink, setShowShareLink] = useState(false)
   const [newVendor, setNewVendor] = useState({
     name: '', category: 'Hall', occasion: 'General', total_amount: '', is_shared: false,
     split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '',
@@ -135,6 +137,20 @@ export default function ExpenseTracker() {
     if (totalPaid <= 0) return 'Booked'
     if (totalPaid >= revisedTotal) return 'Fully Paid'
     return 'Deposit Paid'
+  }
+
+  const generateShareLink = async () => {
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    await supabase.from('shared_links').insert({
+      owner_user_id: user.id,
+      link_token: token,
+      chosson_family: chossonName,
+      kallah_family: kallaName,
+      owner_side: familySettings.my_side
+    })
+    const link = `${window.location.origin}/shared/${token}`
+    setShareLink(link)
+    setShowShareLink(true)
   }
 
   const exportPDF = async (type) => {
@@ -435,6 +451,9 @@ export default function ExpenseTracker() {
         <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
+          <button onClick={generateShareLink} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">
+            🔗 Share Link
+          </button>
           <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
             📄 Shared Report
           </button>
@@ -443,6 +462,34 @@ export default function ExpenseTracker() {
           </button>
         </div>
       </div>
+
+      {showShareLink && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl">
+            <h3 className="text-xl font-bold text-blue-900 mb-4">Share Link Generated! 🔗</h3>
+            <p className="text-gray-500 text-sm mb-4">Send this link to the other family. They can view shared expenses and add comments.</p>
+            <div className="bg-gray-50 rounded-lg p-3 mb-4 break-all text-sm text-blue-900 font-mono">{shareLink}</div>
+            <div className="flex gap-3">
+              <button onClick={() => { navigator.clipboard.writeText(shareLink); showSuccess('✓ Link copied!') }} className="flex-1 bg-blue-900 text-white py-2 rounded-lg font-semibold">Copy Link</button>
+              <button onClick={() => setShowShareLink(false)} className="flex-1 border py-2 rounded-lg text-gray-600">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShareLink && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl">
+            <h3 className="text-xl font-bold text-blue-900 mb-4">Share Link Generated! 🔗</h3>
+            <p className="text-gray-500 text-sm mb-4">Send this link to the other family. They can view shared expenses and add comments.</p>
+            <div className="bg-gray-50 rounded-lg p-3 mb-4 break-all text-sm text-blue-900 font-mono">{shareLink}</div>
+            <div className="flex gap-3">
+              <button onClick={() => { navigator.clipboard.writeText(shareLink); showSuccess('✓ Link copied!') }} className="flex-1 bg-blue-900 text-white py-2 rounded-lg font-semibold">Copy Link</button>
+              <button onClick={() => setShowShareLink(false)} className="flex-1 border py-2 rounded-lg text-gray-600">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {successMessage && (
         <div className="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 font-semibold">
