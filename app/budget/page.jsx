@@ -80,9 +80,7 @@ export default function ExpenseTracker() {
   }
 
   const loadAllPayments = async (vendorList) => {
-    for (const v of vendorList) {
-      await loadPayments(v.id)
-    }
+    for (const v of vendorList) await loadPayments(v.id)
   }
 
   const toggleExpand = async (vendorId) => {
@@ -151,21 +149,16 @@ export default function ExpenseTracker() {
     const paymentType = totalPaidSoFar + newAmount >= revisedTotal ? 'Full Payment' : 'Partial Payment'
     const { data } = await supabase.from('payments').insert({
       vendor_id: vendor.id, amount: newAmount,
-      due_date: p.due_date || null,
-      paid_date: p.paid_date || null,
-      paid_by: p.paid_by || '',
-      payment_method: p.payment_method || 'Cash',
-      is_deposit: false,
-      is_check: p.payment_method === 'Check',
+      due_date: p.due_date || null, paid_date: p.paid_date || null,
+      paid_by: p.paid_by || '', payment_method: p.payment_method || 'Cash',
+      is_deposit: false, is_check: p.payment_method === 'Check',
       check_date: p.payment_method === 'Check' ? (p.check_date || null) : null,
-      is_paid: true,
-      payment_type: paymentType,
-      description: ''
+      is_paid: true, payment_type: paymentType, description: ''
     }).select()
     const updatedPayments = [...(payments[vendor.id] || []), data[0]]
     setPayments(prev => ({ ...prev, [vendor.id]: updatedPayments }))
     const newTotalPaid = updatedPayments.filter(x => x.payment_type !== 'Add-on' && x.is_paid).reduce((s, x) => s + x.amount, 0)
-    const newStatus = getAutoStatus(getVendorRevisedTotal(vendor), newTotalPaid)
+    const newStatus = getAutoStatus(revisedTotal, newTotalPaid)
     await supabase.from('vendors').update({ status: newStatus }).eq('id', vendor.id)
     setVendors(prev => prev.map(v => v.id === vendor.id ? { ...v, status: newStatus } : v))
     setNewPayment(prev => ({ ...prev, [vendor.id]: {} }))
@@ -174,18 +167,12 @@ export default function ExpenseTracker() {
 
   const updatePayment = async (payment) => {
     await supabase.from('payments').update({
-      amount: parseFloat(payment.amount),
-      paid_by: payment.paid_by,
-      payment_method: payment.payment_method,
-      due_date: payment.due_date || null,
-      paid_date: payment.paid_date || null,
-      is_check: payment.payment_method === 'Check',
+      amount: parseFloat(payment.amount), paid_by: payment.paid_by,
+      payment_method: payment.payment_method, due_date: payment.due_date || null,
+      paid_date: payment.paid_date || null, is_check: payment.payment_method === 'Check',
       check_date: payment.payment_method === 'Check' ? (payment.check_date || null) : null,
     }).eq('id', payment.id)
-    setPayments(prev => ({
-      ...prev,
-      [payment.vendor_id]: prev[payment.vendor_id].map(p => p.id === payment.id ? { ...p, ...payment } : p)
-    }))
+    setPayments(prev => ({ ...prev, [payment.vendor_id]: prev[payment.vendor_id].map(p => p.id === payment.id ? { ...p, ...payment } : p) }))
     setEditingPayment(null)
     showSuccess('✓ Payment updated successfully!')
   }
@@ -195,8 +182,7 @@ export default function ExpenseTracker() {
     if (!a?.amount || !a?.description) return
     const { data } = await supabase.from('payments').insert({
       vendor_id: vendor.id, amount: parseFloat(a.amount),
-      due_date: null, paid_date: null,
-      paid_by: '', payment_method: 'Cash',
+      due_date: null, paid_date: null, paid_by: '', payment_method: 'Cash',
       is_deposit: false, is_check: false, check_date: null,
       is_paid: true, payment_type: 'Add-on', description: a.description
     }).select()
@@ -239,20 +225,17 @@ export default function ExpenseTracker() {
     return diff <= 30 && diff >= 0
   }
 
-  // All checks across all vendors
   const allChecks = vendors.flatMap(v =>
     (payments[v.id] || []).filter(p => p.is_check).map(p => ({ ...p, vendorName: v.name }))
   ).sort((a, b) => new Date(a.check_date) - new Date(b.check_date))
 
-  const getSortedVendors = (list) => {
-    return [...list].sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name)
-      if (sortBy === 'price') return b.total_amount - a.total_amount
-      if (sortBy === 'status') return a.status.localeCompare(b.status)
-      if (sortBy === 'category') return a.category.localeCompare(b.category)
-      return 0
-    })
-  }
+  const getSortedVendors = (list) => [...list].sort((a, b) => {
+    if (sortBy === 'name') return a.name.localeCompare(b.name)
+    if (sortBy === 'price') return b.total_amount - a.total_amount
+    if (sortBy === 'status') return a.status.localeCompare(b.status)
+    if (sortBy === 'category') return a.category.localeCompare(b.category)
+    return 0
+  })
 
   const filteredVendors = getSortedVendors(vendors.filter(v => tab === 'my' ? !v.is_shared : v.is_shared))
   const allSharedVendors = vendors.filter(v => v.is_shared)
@@ -261,9 +244,7 @@ export default function ExpenseTracker() {
   const myPrivateTotal = allMyVendors.reduce((s, v) => s + getVendorRevisedTotal(v), 0)
   const mySharedTotal = allSharedVendors.reduce((s, v) => s + (getVendorRevisedTotal(v) * v.split_chosson / 100), 0)
   const myTotalResponsibility = myPrivateTotal + mySharedTotal
-  const myTotalPaid = vendors.reduce((sum, v) => {
-    return sum + (payments[v.id] || []).filter(p => p.paid_by === myFamilyName && p.is_paid).reduce((s, p) => s + p.amount, 0)
-  }, 0)
+  const myTotalPaid = vendors.reduce((sum, v) => sum + (payments[v.id] || []).filter(p => p.paid_by === myFamilyName && p.is_paid).reduce((s, p) => s + p.amount, 0), 0)
   const myStillOwe = Math.max(0, myTotalResponsibility - myTotalPaid)
 
   const sharedTotal = allSharedVendors.reduce((s, v) => s + getVendorRevisedTotal(v), 0)
@@ -323,14 +304,12 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
           <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>
           <button onClick={async () => { setTab('checks'); await loadAllPayments(vendors) }} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'checks' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📋 Check Tracker</button>
         </div>
 
-        {/* Check Tracker Tab */}
         {tab === 'checks' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6">
             <h3 className="font-bold text-blue-900 mb-4">All Post-Dated Checks</h3>
@@ -339,7 +318,7 @@ export default function ExpenseTracker() {
               <div key={c.id} className={`flex items-center justify-between py-3 border-b text-sm ${isPaymentDueSoon(c.check_date, false) ? 'bg-red-50 px-3 rounded-lg' : ''}`}>
                 <div>
                   <p className="font-bold text-gray-800">{c.vendorName}</p>
-                  <p className="text-xs text-gray-400">{c.paid_by} · ${c.amount.toLocaleString()} · {c.payment_method}</p>
+                  <p className="text-xs text-gray-400">{c.paid_by} · ${c.amount.toLocaleString()}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-blue-900">📅 {c.check_date || 'No date'}</p>
@@ -350,42 +329,38 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* My Expenses Summary */}
         {tab === 'my' && (
-          <>
-            <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
-              <h3 className="font-bold text-blue-900 mb-4">My Summary</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="text-center">
-                  <p className="text-gray-500 text-xs mb-1">My Private Expenses</p>
-                  <p className="text-xl font-bold text-blue-900">${myPrivateTotal.toLocaleString()}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-500 text-xs mb-1">My Share of Shared</p>
-                  <p className="text-xl font-bold text-blue-900">${mySharedTotal.toLocaleString()}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-500 text-xs mb-1">I Paid</p>
-                  <p className="text-xl font-bold text-green-600">${myTotalPaid.toLocaleString()}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-500 text-xs mb-1">I Still Owe</p>
-                  <p className="text-xl font-bold text-red-500">${myStillOwe.toLocaleString()}</p>
-                </div>
+          <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+            <h3 className="font-bold text-blue-900 mb-4">My Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">My Private Expenses</p>
+                <p className="text-xl font-bold text-blue-900">${myPrivateTotal.toLocaleString()}</p>
               </div>
-              <div className="bg-blue-50 rounded-lg px-4 py-2 text-sm text-center mb-3">
-                <span className="text-gray-500">My Total Responsibility: </span>
-                <span className="font-bold text-blue-900">${myTotalResponsibility.toLocaleString()}</span>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">My Share of Shared</p>
+                <p className="text-xl font-bold text-blue-900">${mySharedTotal.toLocaleString()}</p>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-900 h-2 rounded-full" style={{ width: `${myTotalResponsibility > 0 ? (myTotalPaid / myTotalResponsibility) * 100 : 0}%` }}></div>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">I Paid</p>
+                <p className="text-xl font-bold text-green-600">${myTotalPaid.toLocaleString()}</p>
               </div>
-              <p className="text-xs text-gray-400 mt-1 text-right">{myTotalResponsibility > 0 ? Math.round((myTotalPaid / myTotalResponsibility) * 100) : 0}% paid</p>
+              <div className="text-center">
+                <p className="text-gray-500 text-xs mb-1">I Still Owe</p>
+                <p className="text-xl font-bold text-red-500">${myStillOwe.toLocaleString()}</p>
+              </div>
             </div>
-          </>
+            <div className="bg-blue-50 rounded-lg px-4 py-2 text-sm text-center mb-3">
+              <span className="text-gray-500">My Total Responsibility: </span>
+              <span className="font-bold text-blue-900">${myTotalResponsibility.toLocaleString()}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-blue-900 h-2 rounded-full" style={{ width: `${myTotalResponsibility > 0 ? (myTotalPaid / myTotalResponsibility) * 100 : 0}%` }}></div>
+            </div>
+            <p className="text-xs text-gray-400 mt-1 text-right">{myTotalResponsibility > 0 ? Math.round((myTotalPaid / myTotalResponsibility) * 100) : 0}% paid</p>
+          </div>
         )}
 
-        {/* Shared Expenses Summary */}
         {tab === 'shared' && (
           <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
             <h3 className="font-bold text-blue-900 mb-4">Shared Summary</h3>
@@ -405,10 +380,10 @@ export default function ExpenseTracker() {
                 <p className="text-xs text-green-600">Paid: ${paidByKalla.toLocaleString()}</p>
               </div>
             </div>
-            {(paidByChosson > 0 || paidByKalla > 0) && (
-              <div className={`rounded-lg px-4 py-3 text-sm text-center font-semibold ${chossonBalance < 0 || kallaBalance < 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                {chossonBalance < 0 ? `${chossonName} owes ${kallaName} $${Math.abs(chossonBalance).toLocaleString()}`
-                  : kallaBalance < 0 ? `${kallaName} owes ${chossonName} $${Math.abs(kallaBalance).toLocaleString()}`
+            {(paidByChosson > chossonShare || paidByKalla > kallaShare) && (
+              <div className={`rounded-lg px-4 py-3 text-sm text-center font-semibold ${chossonBalance > 0 ? 'bg-green-50 text-green-600' : kallaBalance > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                {chossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}`
+                  : kallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}`
                   : '✓ All settled'}
               </div>
             )}
@@ -419,7 +394,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Vendor list for my/shared tabs */}
         {(tab === 'my' || tab === 'shared') && (
           <>
             <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
@@ -563,7 +537,6 @@ export default function ExpenseTracker() {
                           </div>
                         </div>
 
-                        {/* Payments */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Payments</p>
                           {regularPayments.length === 0 && <p className="text-xs text-gray-400 mb-2">No payments yet.</p>}
@@ -584,7 +557,7 @@ export default function ExpenseTracker() {
                                     <input type="date" value={editingPayment.paid_date || ''} onChange={e => setEditingPayment(x => ({ ...x, paid_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
                                     <input type="date" value={editingPayment.due_date || ''} onChange={e => setEditingPayment(x => ({ ...x, due_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" placeholder="Due date" />
                                     {editingPayment.payment_method === 'Check' && (
-                                      <input type="date" value={editingPayment.check_date || ''} onChange={e => setEditingPayment(x => ({ ...x, check_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" placeholder="Check date" />
+                                      <input type="date" value={editingPayment.check_date || ''} onChange={e => setEditingPayment(x => ({ ...x, check_date: e.target.value }))} className="border rounded px-2 py-1 text-sm" />
                                     )}
                                   </div>
                                   <div className="flex gap-2">
@@ -644,7 +617,6 @@ export default function ExpenseTracker() {
                           </div>
                         </div>
 
-                        {/* Additional Charges */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Additional Charges {addonTotal > 0 && <span className="text-purple-600 font-normal text-xs ml-1">+${addonTotal.toLocaleString()} total</span>}</p>
                           {addons.length === 0 && <p className="text-xs text-gray-400 mb-2">No additional charges yet.</p>}
@@ -666,7 +638,6 @@ export default function ExpenseTracker() {
                           </div>
                         </div>
 
-                        {/* Comments */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Comments</p>
                           {(comments[vendor.id] || []).length === 0 && <p className="text-xs text-gray-400 mb-2">No comments yet.</p>}
