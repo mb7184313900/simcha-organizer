@@ -35,7 +35,6 @@ export default function ExpenseTracker() {
   const [newCustomOccasion, setNewCustomOccasion] = useState('')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddOccasion, setShowAddOccasion] = useState(false)
-  const [exportingPDF, setExportingPDF] = useState(false)
   const [newVendor, setNewVendor] = useState({
     name: '', category: 'Hall', occasion: 'General', total_amount: '', is_shared: false,
     split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '',
@@ -139,130 +138,97 @@ export default function ExpenseTracker() {
   }
 
   const exportPDF = async () => {
-    setExportingPDF(true)
     await loadAllPayments(vendors)
-    const jsPDFModule = (await import('jspdf')).default
-    await import('jspdf-autotable')
-    const doc = new jsPDFModule()
-    const pageWidth = doc.internal.pageSize.getWidth()
-    let y = 20
+    const printWindow = window.open('', '_blank')
+    const html = `
+      <html>
+      <head>
+        <title>SimchaPro Expense Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+          h1 { color: #1a3c8f; text-align: center; margin-bottom: 5px; }
+          h2 { color: #1a3c8f; margin-top: 30px; border-bottom: 2px solid #1a3c8f; padding-bottom: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+          th { background: #1a3c8f; color: white; padding: 8px; text-align: left; }
+          td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+          .summary-box { background: #f0f4ff; padding: 15px; border-radius: 8px; margin: 15px 0; }
+          .balance { font-size: 15px; font-weight: bold; color: #c00; margin: 10px 0 0; }
+          .settled { font-size: 15px; font-weight: bold; color: green; margin: 10px 0 0; }
+          .vendor-header { background: #e8edf8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+          .subtitle { text-align: center; color: #666; margin: 3px 0; }
+          .print-btn { position: fixed; top: 20px; right: 20px; background: #1a3c8f; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+          @media print { .print-btn { display: none; } }
+        </style>
+      </head>
+      <body>
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <h1>SimchaPro — Expense Report</h1>
+        <p class="subtitle">${chossonName} & ${kallaName}</p>
+        <p class="subtitle">Generated: ${new Date().toLocaleDateString()}</p>
 
-    doc.setFontSize(20)
-    doc.setTextColor(26, 60, 143)
-    doc.text('SimchaPro — Expense Report', pageWidth / 2, y, { align: 'center' })
-    y += 10
-    doc.setFontSize(11)
-    doc.setTextColor(100, 100, 100)
-    doc.text(`${chossonName} & ${kallaName}`, pageWidth / 2, y, { align: 'center' })
-    y += 6
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, y, { align: 'center' })
-    y += 12
+        <h2>Summary</h2>
+        <div class="summary-box">
+          <table>
+            <tr><th></th><th>${chossonName}</th><th>${kallaName}</th><th>Total</th></tr>
+            <tr><td>Share of Shared Expenses</td><td>$${chossonShare.toLocaleString()}</td><td>$${kallaShare.toLocaleString()}</td><td>$${sharedTotal.toLocaleString()}</td></tr>
+            <tr><td>Amount Paid</td><td>$${paidByChosson.toLocaleString()}</td><td>$${paidByKalla.toLocaleString()}</td><td>$${(paidByChosson + paidByKalla).toLocaleString()}</td></tr>
+            <tr><td>Still Owes to Vendor</td><td>$${Math.max(0, chossonShare - paidByChosson).toLocaleString()}</td><td>$${Math.max(0, kallaShare - paidByKalla).toLocaleString()}</td><td></td></tr>
+          </table>
+          <p class="${chossonBalance > 0 || kallaBalance > 0 ? 'balance' : 'settled'}">${chossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}` : kallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}` : '✓ All settled'}</p>
+        </div>
 
-    doc.setFontSize(13)
-    doc.setTextColor(26, 60, 143)
-    doc.text('Summary', 14, y)
-    y += 7
+        <h2>Shared Expenses — Detail</h2>
+        ${allSharedVendors.map(vendor => {
+          const revisedTotal = getVendorRevisedTotal(vendor)
+          const vPayments = payments[vendor.id] || []
+          return `
+            <div class="vendor-header">${vendor.name} &nbsp;|&nbsp; ${vendor.category} &nbsp;|&nbsp; For: ${vendor.occasion || 'General'} &nbsp;|&nbsp; Total: $${revisedTotal.toLocaleString()} &nbsp;|&nbsp; Split: ${vendor.split_chosson}% ${chossonName} / ${vendor.split_kallah}% ${kallaName}</div>
+            <table>
+              <tr><th>Type</th><th>Amount</th><th>Paid By</th><th>Method</th><th>Date</th><th>Check Date</th><th>Note</th></tr>
+              ${vPayments.length > 0 ? vPayments.map(p => `
+                <tr>
+                  <td>${p.payment_type || ''}</td>
+                  <td>$${p.amount.toLocaleString()}</td>
+                  <td>${p.paid_by || ''}</td>
+                  <td>${p.payment_method || ''}</td>
+                  <td>${p.paid_date || p.due_date || ''}</td>
+                  <td>${p.is_check && p.check_date ? p.check_date : ''}</td>
+                  <td>${p.description || ''}</td>
+                </tr>
+              `).join('') : '<tr><td colspan="7" style="color:#999">No payments recorded</td></tr>'}
+            </table>
+          `
+        }).join('')}
 
-    doc.autoTable({
-      startY: y,
-      head: [['', chossonName, kallaName, 'Total']],
-      body: [
-        ['Share of Shared Expenses', `$${chossonShare.toLocaleString()}`, `$${kallaShare.toLocaleString()}`, `$${sharedTotal.toLocaleString()}`],
-        ['Amount Paid', `$${paidByChosson.toLocaleString()}`, `$${paidByKalla.toLocaleString()}`, `$${(paidByChosson + paidByKalla).toLocaleString()}`],
-        ['Still Owes to Vendor', `$${Math.max(0, chossonShare - paidByChosson).toLocaleString()}`, `$${Math.max(0, kallaShare - paidByKalla).toLocaleString()}`, ''],
-      ],
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [26, 60, 143] },
-    })
-    y = doc.lastAutoTable.finalY + 8
-
-    if (chossonBalance > 0) {
-      doc.setTextColor(200, 0, 0)
-      doc.setFontSize(11)
-      doc.text(`Balance: ${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}`, 14, y)
-    } else if (kallaBalance > 0) {
-      doc.setTextColor(200, 0, 0)
-      doc.setFontSize(11)
-      doc.text(`Balance: ${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}`, 14, y)
-    } else {
-      doc.setTextColor(0, 150, 0)
-      doc.setFontSize(11)
-      doc.text('Balance: All settled', 14, y)
-    }
-    y += 14
-
-    doc.setTextColor(26, 60, 143)
-    doc.setFontSize(13)
-    doc.text('Shared Expenses — Detail', 14, y)
-    y += 7
-
-    for (const vendor of allSharedVendors) {
-      const revisedTotal = getVendorRevisedTotal(vendor)
-      const vPayments = payments[vendor.id] || []
-      const rows = vPayments.map(p => [
-        p.payment_type || '',
-        `$${p.amount.toLocaleString()}`,
-        p.paid_by || '',
-        p.payment_method || '',
-        p.paid_date || p.due_date || '',
-        p.is_check && p.check_date ? `Check: ${p.check_date}` : '',
-        p.description || ''
-      ])
-      doc.autoTable({
-        startY: y,
-        head: [[`${vendor.name}  |  ${vendor.category}  |  For: ${vendor.occasion || 'General'}  |  Total: $${revisedTotal.toLocaleString()}  |  Split: ${vendor.split_chosson}% ${chossonName} / ${vendor.split_kallah}% ${kallaName}`, '', '', '', '', '', '']],
-        body: rows.length > 0 ? rows : [['No payments recorded', '', '', '', '', '', '']],
-        columns: [
-          { header: 'Type', dataKey: 0 },
-          { header: 'Amount', dataKey: 1 },
-          { header: 'Paid By', dataKey: 2 },
-          { header: 'Method', dataKey: 3 },
-          { header: 'Date', dataKey: 4 },
-          { header: 'Check', dataKey: 5 },
-          { header: 'Note', dataKey: 6 }
-        ],
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [200, 210, 240], textColor: [26, 60, 143] },
-      })
-      y = doc.lastAutoTable.finalY + 4
-      if (y > 260) { doc.addPage(); y = 20 }
-    }
-
-    if (allMyVendors.length > 0) {
-      if (y > 240) { doc.addPage(); y = 20 }
-      y += 4
-      doc.setTextColor(26, 60, 143)
-      doc.setFontSize(13)
-      doc.text(`${myFamilyName} — Private Expenses`, 14, y)
-      y += 7
-
-      for (const vendor of allMyVendors) {
-        const revisedTotal = getVendorRevisedTotal(vendor)
-        const vPayments = payments[vendor.id] || []
-        const rows = vPayments.map(p => [
-          p.payment_type || '',
-          `$${p.amount.toLocaleString()}`,
-          p.paid_by || '',
-          p.payment_method || '',
-          p.paid_date || p.due_date || '',
-          p.is_check && p.check_date ? `Check: ${p.check_date}` : '',
-          p.description || ''
-        ])
-        doc.autoTable({
-          startY: y,
-          head: [[`${vendor.name}  |  ${vendor.category}  |  For: ${vendor.occasion || 'General'}  |  Total: $${revisedTotal.toLocaleString()}`, '', '', '', '', '', '']],
-          body: rows.length > 0 ? rows : [['No payments recorded', '', '', '', '', '', '']],
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [220, 240, 220], textColor: [40, 80, 40] },
-        })
-        y = doc.lastAutoTable.finalY + 4
-        if (y > 260) { doc.addPage(); y = 20 }
-      }
-    }
-
-    doc.save(`SimchaPro-${chossonName}-${kallaName}-${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`)
-    setExportingPDF(false)
-    showSuccess('✓ PDF exported successfully!')
+        ${allMyVendors.length > 0 ? `
+        <h2>${myFamilyName} — Private Expenses</h2>
+        ${allMyVendors.map(vendor => {
+          const revisedTotal = getVendorRevisedTotal(vendor)
+          const vPayments = payments[vendor.id] || []
+          return `
+            <div class="vendor-header">${vendor.name} &nbsp;|&nbsp; ${vendor.category} &nbsp;|&nbsp; For: ${vendor.occasion || 'General'} &nbsp;|&nbsp; Total: $${revisedTotal.toLocaleString()}</div>
+            <table>
+              <tr><th>Type</th><th>Amount</th><th>Paid By</th><th>Method</th><th>Date</th><th>Check Date</th><th>Note</th></tr>
+              ${vPayments.length > 0 ? vPayments.map(p => `
+                <tr>
+                  <td>${p.payment_type || ''}</td>
+                  <td>$${p.amount.toLocaleString()}</td>
+                  <td>${p.paid_by || ''}</td>
+                  <td>${p.payment_method || ''}</td>
+                  <td>${p.paid_date || p.due_date || ''}</td>
+                  <td>${p.is_check && p.check_date ? p.check_date : ''}</td>
+                  <td>${p.description || ''}</td>
+                </tr>
+              `).join('') : '<tr><td colspan="7" style="color:#999">No payments recorded</td></tr>'}
+            </table>
+          `
+        }).join('')}
+        ` : ''}
+      </body>
+      </html>
+    `
+    printWindow.document.write(html)
+    printWindow.document.close()
   }
 
   const addVendor = async () => {
@@ -463,8 +429,8 @@ export default function ExpenseTracker() {
         <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
         <div className="flex items-center gap-4">
           <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
-          <button onClick={exportPDF} disabled={exportingPDF} className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 disabled:opacity-50">
-            {exportingPDF ? 'Generating...' : '📄 Export PDF'}
+          <button onClick={exportPDF} className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
+            📄 Export PDF
           </button>
         </div>
       </div>
