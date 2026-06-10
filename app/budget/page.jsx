@@ -822,6 +822,10 @@ export default function ExpenseTracker() {
                                     {p.paid_by && <span className="text-xs text-gray-400">by {p.paid_by}</span>}
                                     {p.payment_method && <span className="text-xs text-gray-400">· {p.payment_method}</span>}
                                     <button onClick={() => setEditingPayment({ ...p })} className="text-blue-500 text-xs hover:underline">✏️</button>
+<button onClick={async () => {
+  await supabase.from('payments').delete().eq('id', p.id)
+  setPayments(prev => ({ ...prev, [vendor.id]: prev[vendor.id].filter(x => x.id !== p.id) }))
+}} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
                                   </div>
                                   <div className="text-right text-xs">
                                     {p.due_date && <p className="text-gray-400">Due: {p.due_date}</p>}
@@ -875,7 +879,13 @@ export default function ExpenseTracker() {
                                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Add-on</span>
                                 {p.description && <span className="text-xs text-gray-500">{p.description}</span>}
                               </div>
-                              <span className="text-green-600 text-xs font-semibold">✓ Recorded</span>
+                              <div className="flex items-center gap-2">
+  <span className="text-green-600 text-xs font-semibold">✓ Recorded</span>
+  <button onClick={async () => {
+    await supabase.from('payments').delete().eq('id', p.id)
+    setPayments(prev => ({ ...prev, [vendor.id]: prev[vendor.id].filter(x => x.id !== p.id) }))
+  }} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
+</div>
                             </div>
                           ))}
                           <div className="mt-3 bg-purple-50 rounded-lg p-4 space-y-3">
