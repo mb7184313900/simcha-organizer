@@ -76,7 +76,7 @@ export default function Dashboard() {
       <div className="bg-blue-900 text-white px-8 py-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">SimchaPro</h1>
         <div className="flex items-center gap-4">
-          <span className="text-blue-200 text-sm">{user.email}</span>
+          <span onClick={() => router.push('/account')} className="text-blue-200 text-sm cursor-pointer hover:text-white underline">{user.email}</span>
           <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
             Sign Out
           </button>
