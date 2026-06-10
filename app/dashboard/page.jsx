@@ -21,7 +21,7 @@ export default function Dashboard() {
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('email', user.email)
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
