@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 export default function Dashboard() {
   const [user, setUser] = useState(null)
   const [access, setAccess] = useState(null)
+const [daysLeft, setDaysLeft] = useState(null)
+const [subStatus, setSubStatus] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -36,6 +38,8 @@ export default function Dashboard() {
 
       if (expires > now) {
         setAccess(sub.status)
+        setSubStatus(sub.status)
+        setDaysLeft(Math.ceil((expires - now) / (1000 * 60 * 60 * 24)))
       } else {
         setAccess('expired')
       }
@@ -88,6 +92,12 @@ export default function Dashboard() {
         {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('payment') === 'success' && (
   <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-green-700 font-medium">
     🎉 Payment successful! Your account is now active. Welcome to SimchaPro!
+  </div>
+)}
+{subStatus === 'trial' && daysLeft !== null && (
+  <div className={`rounded-xl p-4 mb-6 font-medium ${daysLeft <= 3 ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
+    {daysLeft <= 3 ? `⚠️ Your free trial expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}! ` : `⏳ ${daysLeft} days left in your free trial. `}
+    <a href="/pricing" className="underline font-bold">Upgrade now</a>
   </div>
 )}
 <p className="text-gray-500 mb-10">What would you like to work on today?</p>
