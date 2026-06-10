@@ -11,7 +11,7 @@ export default function Signup() {
 
   const handleSignup = async () => {
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } }
@@ -19,7 +19,16 @@ export default function Signup() {
     if (error) {
       setMessage(error.message)
     } else {
-      setMessage('Check your email to confirm your account!')
+      const expires_at = new Date()
+      expires_at.setDate(expires_at.getDate() + 7)
+      await supabase.from('subscriptions').insert({
+        user_id: data.user.id,
+        email,
+        plan: 'trial',
+        status: 'trial',
+        expires_at: expires_at.toISOString(),
+      })
+      window.location.href = '/dashboard'
     }
     setLoading(false)
   }
@@ -37,7 +46,7 @@ export default function Signup() {
             {loading ? 'Creating account...' : 'Start Free Trial'}
           </button>
         </div>
-        {message && <p className="mt-4 text-center text-sm text-green-600">{message}</p>}
+        {message && <p className="mt-4 text-center text-sm text-red-600">{message}</p>}
         <p className="mt-6 text-center text-sm text-gray-500">Already have an account? <a href="/login" className="text-blue-600 hover:underline">Sign in</a></p>
       </div>
     </main>
