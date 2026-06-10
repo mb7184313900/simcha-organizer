@@ -6,6 +6,7 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
 
   const handleReset = async () => {
     setLoading(true)
@@ -13,9 +14,23 @@ export default function ResetPassword() {
     if (error) {
       setMessage(error.message)
     } else {
-      setMessage('Password updated successfully! You can now sign in.')
+      setDone(true)
     }
     setLoading(false)
+  }
+
+  if (done) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-sm border w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold text-blue-900 mb-2">Password Updated!</h1>
+          <p className="text-gray-500 mb-6">Your password has been changed successfully.</p>
+          <a href="/login" className="block w-full bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800">
+            Sign In Now
+          </a>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -39,7 +54,7 @@ export default function ResetPassword() {
             {loading ? 'Updating...' : 'Update Password'}
           </button>
         </div>
-        {message && <p className="mt-4 text-center text-sm text-green-600">{message}</p>}
+        {message && <p className="mt-4 text-center text-sm text-red-600">{message}</p>}
       </div>
     </main>
   )
