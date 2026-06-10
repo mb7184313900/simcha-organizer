@@ -28,7 +28,7 @@ export default function Signup() {
     <main className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-xl shadow-sm border w-full max-w-md">
         <h1 className="text-2xl font-bold text-blue-900 mb-2">Create your SimchaPro account</h1>
-        <p className="text-gray-500 mb-6">Start your 15-day free trial</p>
+        <p className="text-gray-500 mb-6">Start your 7-day free trial</p>
         <div className="space-y-4">
           <input type="text" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
