@@ -85,7 +85,12 @@ export default function Dashboard() {
 
       <div className="max-w-5xl mx-auto px-8 py-12">
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Welcome to SimchaPro! 🎉</h2>
-        <p className="text-gray-500 mb-10">What would you like to work on today?</p>
+        {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('payment') === 'success' && (
+  <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-green-700 font-medium">
+    🎉 Payment successful! Your account is now active. Welcome to SimchaPro!
+  </div>
+)}
+<p className="text-gray-500 mb-10">What would you like to work on today?</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div onClick={() => router.push('/guide')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
