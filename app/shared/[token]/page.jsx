@@ -11,8 +11,6 @@ export default function SharedView() {
   const [linkData, setLinkData] = useState(null)
   const [vendors, setVendors] = useState([])
   const [payments, setPayments] = useState({})
-  const [comments, setComments] = useState({})
-  const [newComment, setNewComment] = useState({})
   const [expandedVendor, setExpandedVendor] = useState(null)
   const [user, setUser] = useState(null)
   const [showSignup, setShowSignup] = useState(false)
@@ -53,16 +51,10 @@ export default function SharedView() {
     setPayments(prev => ({ ...prev, [vendorId]: data || [] }))
   }
 
-  const loadComments = async (vendorId) => {
-    const { data } = await supabase.from('vendor_comments').select('*').eq('vendor_id', vendorId)
-    setComments(prev => ({ ...prev, [vendorId]: data || [] }))
-  }
-
   const toggleExpand = async (vendorId) => {
     if (expandedVendor === vendorId) { setExpandedVendor(null); return }
     setExpandedVendor(vendorId)
     await loadPayments(vendorId)
-    await loadComments(vendorId)
   }
 
   const handleSignup = async () => {
@@ -83,15 +75,6 @@ export default function SharedView() {
     setUser(user)
     setShowSignup(false)
     await loadSharedData(linkData.owner_user_id)
-  }
-
-  const addComment = async (vendorId) => {
-    const text = newComment[vendorId]
-    if (!text) return
-    const familyName = linkData?.my_side === 'chosson' ? linkData?.kallah_family : linkData?.chosson_family
-    const { data } = await supabase.from('vendor_comments').insert({ vendor_id: vendorId, user_id: user.id, family_name: familyName, comment: text }).select()
-    setComments(prev => ({ ...prev, [vendorId]: [...(prev[vendorId] || []), data[0]] }))
-    setNewComment(prev => ({ ...prev, [vendorId]: '' }))
   }
 
   const getVendorAddonTotal = (vendorId) => (payments[vendorId] || []).filter(p => p.payment_type === 'Add-on').reduce((s, p) => s + p.amount, 0)
@@ -142,7 +125,7 @@ export default function SharedView() {
 
       <div className="max-w-4xl mx-auto px-8 py-10">
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Shared Expenses 💰</h2>
-        <p className="text-gray-500 mb-6">View-only access — you can add comments</p>
+        <p className="text-gray-500 mb-6">View-only access</p>
 
         <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <h3 className="font-bold text-blue-900 mb-4">Summary</h3>
@@ -232,21 +215,6 @@ export default function SharedView() {
                           </div>
                         </div>
                       ))}
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-bold text-blue-900 mb-2">Comments</p>
-                      {(comments[vendor.id] || []).length === 0 && <p className="text-xs text-gray-400 mb-2">No comments yet.</p>}
-                      {(comments[vendor.id] || []).map(c => (
-                        <div key={c.id} className="text-sm py-2 border-b">
-                          <span className="font-semibold text-blue-900">{c.family_name}: </span>
-                          <span className="text-gray-700">{c.comment}</span>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 mt-2">
-                        <input placeholder="Add a comment..." value={newComment[vendor.id] || ''} onChange={e => setNewComment(p => ({ ...p, [vendor.id]: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <button onClick={() => addComment(vendor.id)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">Send</button>
-                      </div>
                     </div>
                   </div>
                 )}
