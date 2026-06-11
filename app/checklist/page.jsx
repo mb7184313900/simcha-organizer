@@ -291,14 +291,24 @@ export default function ChecklistPage() {
   const [items, setItems] = useState({})
   const [newItemText, setNewItemText] = useState('')
   const [dateInputs, setDateInputs] = useState({})
-  const [removedItems, setRemovedItems] = useState({})
   const [showRemoved, setShowRemoved] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+
+      if (!user) {
+        // Not logged in — show free view-only version
+        const initial = {}
+        Object.keys(CHECKLISTS).forEach(k => {
+          initial[k] = CHECKLISTS[k].map(text => ({ text, checked: false, removed: false, date: null, isCustom: false }))
+        })
+        setItems(initial)
+        setLoading(false)
+        return
+      }
+
       setUser(user)
 
       const { data: sub } = await supabase
@@ -310,13 +320,12 @@ export default function ChecklistPage() {
         .single()
 
       const now = new Date()
-      const paid = sub && new Date(sub.expires_at) > now
-      setIsPaid(!!paid)
+      const hasAccess = sub && new Date(sub.expires_at) > now
+      setIsPaid(!!hasAccess)
 
-      if (paid) {
+      if (hasAccess) {
         await loadUserData(user.id)
       } else {
-        // Initialize items for free users (view only, no state)
         const initial = {}
         Object.keys(CHECKLISTS).forEach(k => {
           initial[k] = CHECKLISTS[k].map(text => ({ text, checked: false, removed: false, date: null, isCustom: false }))
@@ -493,8 +502,20 @@ export default function ChecklistPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-blue-900 text-white px-6 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
-        <span className="text-blue-200 text-sm">Simcha Checklist</span>
+        <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/')}>SimchaPro</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-blue-200 text-sm">Simcha Checklist</span>
+          {!user && (
+            <a href="/login" className="bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-yellow-300">
+              Sign In
+            </a>
+          )}
+          {user && (
+            <span onClick={() => router.push('/dashboard')} className="text-blue-200 text-sm cursor-pointer hover:text-white underline">
+              Dashboard
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-10">
@@ -503,15 +524,15 @@ export default function ChecklistPage() {
           Planning a wedding can be overwhelming. We've gathered practical checklists, traditional customs, and planning guides to help keep everything organized from the Shidduch through the Sheva Brachos.
         </p>
 
-        {/* Upgrade Banner for free users */}
+        {/* Upgrade Banner */}
         {!isPaid && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="font-semibold text-yellow-800">You're viewing a preview</p>
-              <p className="text-yellow-700 text-sm">Upgrade to check off items, add custom tasks, set dates, and export to PDF.</p>
+              <p className="text-yellow-700 text-sm">Sign up to check off items, add custom tasks, set dates, and export to PDF.</p>
             </div>
-            <a href="/pricing" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
-              Upgrade Now
+            <a href="/signup" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
+              Start Free Trial
             </a>
           </div>
         )}
@@ -544,7 +565,7 @@ export default function ChecklistPage() {
             )}
           </div>
 
-          {/* Items with dates (paid only) */}
+          {/* Items with dates */}
           {isPaid && withDate.length > 0 && (
             <div className="divide-y border-b">
               {withDate.map(item => {
@@ -624,7 +645,7 @@ export default function ChecklistPage() {
           )}
         </div>
 
-        {/* Removed items section */}
+        {/* Removed items */}
         {isPaid && removedList.length > 0 && (
           <div className="mt-2">
             <button
@@ -660,7 +681,6 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
 
   return (
     <div className={`flex items-start gap-3 px-6 py-4 group ${highlight ? 'bg-blue-50' : ''} ${item.checked ? 'opacity-60' : ''}`}>
-      {/* Checkbox */}
       <button
         onClick={isPaid ? onToggle : undefined}
         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
@@ -674,14 +694,12 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
         {item.checked && <span className="text-white text-xs">✓</span>}
       </button>
 
-      {/* Text + date */}
       <div className="flex-1 min-w-0">
         <span className={`text-sm ${item.checked ? 'line-through text-gray-400' : 'text-gray-700'}`}>
           {item.text}
           {item.isCustom && <span className="ml-2 text-xs text-blue-400 font-medium">custom</span>}
         </span>
 
-        {/* Date badge */}
         {item.date && isPaid && (
           <div className="mt-1 flex items-center gap-2">
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -697,7 +715,6 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
           </div>
         )}
 
-        {/* Date picker */}
         {isPaid && showDatePicker && (
           <div className="mt-2 flex items-center gap-2">
             <input
@@ -717,7 +734,6 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
         )}
       </div>
 
-      {/* Actions */}
       {isPaid && !item.checked && (
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           {!item.date && (
