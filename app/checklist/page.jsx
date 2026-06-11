@@ -292,6 +292,7 @@ export default function ChecklistPage() {
   const [newItemText, setNewItemText] = useState('')
   const [dateInputs, setDateInputs] = useState({})
   const [showRemoved, setShowRemoved] = useState(false)
+const [showHowItWorks, setShowHowItWorks] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -524,6 +525,22 @@ export default function ChecklistPage() {
           Planning a wedding can be overwhelming. We've gathered practical checklists, traditional customs, and planning guides to help keep everything organized from the Shidduch through the Sheva Brachos.
         </p>
 
+{/* How It Works Popup */}
+{showHowItWorks && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowHowItWorks(false)}>
+    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+      <h3 className="text-xl font-bold text-blue-900 mb-4">How the Checklist Works</h3>
+      <ul className="space-y-3 text-sm text-gray-600">
+        <li className="flex gap-3"><span className="text-blue-900 font-bold">📅</span><span><strong>Set a date</strong> on any item — items with dates float to the top, sorted by closest date first, with a countdown showing how many days away.</span></li>
+        <li className="flex gap-3"><span className="text-blue-900 font-bold">✓</span><span><strong>Check off items</strong> as you complete them — checked items move to the bottom of the list so you can focus on what's left.</span></li>
+        <li className="flex gap-3"><span className="text-blue-900 font-bold">🗑️</span><span><strong>Remove items</strong> that don't apply to you — they move to a hidden section at the bottom where you can add them back anytime.</span></li>
+        <li className="flex gap-3"><span className="text-blue-900 font-bold">➕</span><span><strong>Add your own items</strong> to any checklist using the input at the bottom of each list.</span></li>
+        <li className="flex gap-3"><span className="text-blue-900 font-bold">📄</span><span><strong>Export</strong> any combination of checklists to a printable PDF — choose which lists to include and print or save.</span></li>
+      </ul>
+      <button onClick={() => setShowHowItWorks(false)} className="mt-6 w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800">Got It</button>
+    </div>
+  </div>
+)}
         {/* Upgrade Banner */}
         {!isPaid && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -557,13 +574,18 @@ export default function ChecklistPage() {
         {/* Active Checklist */}
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden mb-4">
           <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
-            <h3 className="font-bold text-blue-900 text-lg">{CHECKLIST_LABELS[activeList]}</h3>
-            {isPaid && (
-              <button onClick={exportToPDF} className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold">
-                Export ↓
-              </button>
-            )}
-          </div>
+  <h3 className="font-bold text-blue-900 text-lg">{CHECKLIST_LABELS[activeList]}</h3>
+  {isPaid && (
+    <div className="flex items-center gap-2">
+      <button onClick={() => setShowHowItWorks(true)} className="text-xs text-gray-500 border border-gray-200 px-3 py-1 rounded-full hover:bg-gray-100 font-semibold">
+        How it works
+      </button>
+      <button onClick={() => router.push('/checklist/export')} className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold">
+        Export ↓
+      </button>
+    </div>
+  )}
+</div>
 
           {/* Items with dates */}
           {isPaid && withDate.length > 0 && (
