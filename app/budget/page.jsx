@@ -499,7 +499,7 @@ export default function ExpenseTracker() {
                   <p className="text-xs text-gray-400">{c.paid_by} · ${c.amount.toLocaleString()}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-blue-900">📅 {c.check_date || 'No date'}</p>
+                  <p className="font-semibold text-blue-900">📅 {c.check_date ? new Date(c.check_date + 'T00:00:00').toLocaleDateString('en-US') : 'No date'}</p>
                   {isPaymentDueSoon(c.check_date, false) && <p className="text-xs text-red-600 font-semibold">⚠️ Coming up soon!</p>}
                 </div>
               </div>
