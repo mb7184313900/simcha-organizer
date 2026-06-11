@@ -701,19 +701,23 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
         </span>
 
         {item.date && isPaid && (
-          <div className="mt-1 flex items-center gap-2">
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-              days === 0 ? 'bg-red-100 text-red-700' :
-              days < 0 ? 'bg-gray-100 text-gray-500' :
-              days <= 7 ? 'bg-orange-100 text-orange-700' :
-              'bg-blue-100 text-blue-700'
-            }`}>
-              {days === 0 ? 'Today!' : days < 0 ? `${Math.abs(days)}d ago` : `${days} day${days === 1 ? '' : 's'} away`}
-            </span>
-            <span className="text-xs text-gray-400">{item.date}</span>
-            <button onClick={() => onSetDate(null)} className="text-xs text-gray-300 hover:text-red-400">✕</button>
-          </div>
-        )}
+  <div className="mt-1 flex items-center gap-2">
+    <span
+      onClick={() => setShowDatePicker(v => !v)}
+      className={`text-xs font-semibold px-2 py-0.5 rounded-full cursor-pointer hover:opacity-75 ${
+        days === 0 ? 'bg-red-100 text-red-700' :
+        days < 0 ? 'bg-gray-100 text-gray-500' :
+        days <= 7 ? 'bg-orange-100 text-orange-700' :
+        'bg-blue-100 text-blue-700'
+      }`}
+      title="Click to edit date"
+    >
+      {days === 0 ? 'Today!' : days < 0 ? `${Math.abs(days)}d ago` : `${days} day${days === 1 ? '' : 's'} away`}
+    </span>
+    <span className="text-xs text-gray-400">{item.date}</span>
+    <button onClick={() => onSetDate(null)} className="text-xs text-gray-300 hover:text-red-400">✕</button>
+  </div>
+)}
 
         {isPaid && showDatePicker && (
           <div className="mt-2 flex items-center gap-2">
