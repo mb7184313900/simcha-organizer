@@ -103,9 +103,9 @@ const [subStatus, setSubStatus] = useState(null)
 <p className="text-gray-500 mb-10">What would you like to work on today?</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div onClick={() => router.push('/guide')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
+          <div onClick={() => router.push('/checklist')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
             <div className="text-5xl mb-4">📋</div>
-            <h3 className="text-xl font-bold text-blue-900 mb-2">Simcha Guide</h3>
+            <h3 className="text-xl font-bold text-blue-900 mb-2">Simcha Checklist</h3>
             <p className="text-gray-500 text-sm">Step by step guidance for every simcha — Lchaim, Tenaim, Wedding and more</p>
           </div>
 

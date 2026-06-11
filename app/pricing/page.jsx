@@ -27,7 +27,7 @@ export default function PricingPage() {
         <p className="text-sm text-green-600 font-medium mb-6">✓ 7-day free trial included</p>
         <ul className="text-gray-600 text-sm mb-8 space-y-2 w-full">
           <li>✓ Full year of access</li>
-          <li>✓ Simcha Guide</li>
+          <li>✓ Simcha Checklist</li>
           <li>✓ Budget Organizer</li>
           <li>✓ Simcha Magazine</li>
         </ul>
