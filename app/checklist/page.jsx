@@ -739,16 +739,14 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
       </div>
 
       {isPaid && !item.checked && (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          {!item.date && (
-            <button
-              onClick={() => setShowDatePicker(v => !v)}
-              className="text-xs text-gray-400 hover:text-blue-600 border border-gray-200 px-2 py-0.5 rounded-full"
-              title="Set date"
-            >
-              📅
-            </button>
-          )}
+  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+    <button
+      onClick={() => setShowDatePicker(v => !v)}
+      className="text-xs text-gray-400 hover:text-blue-600 border border-gray-200 px-2 py-0.5 rounded-full"
+      title={item.date ? 'Edit date' : 'Set date'}
+    >
+      📅
+    </button>
           <button
             onClick={onRemove}
             className="text-xs text-gray-300 hover:text-red-500 border border-gray-200 px-2 py-0.5 rounded-full"
