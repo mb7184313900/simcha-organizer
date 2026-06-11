@@ -5,7 +5,7 @@ export default function Home() {
       <header className="bg-blue-900 text-white py-4 px-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold">SimchaPro</h1>
         <nav className="flex gap-6">
-          <a href="/guide" className="hover:text-yellow-300">Guide</a>
+          <a href="/checklist" className="hover:text-yellow-300">Checklist</a>
           <a href="/budget" className="hover:text-yellow-300">Organizer</a>
           <a href="#" className="hover:text-yellow-300">Magazine</a>
           <a href="/login" className="hover:text-yellow-300">Sign In</a>
@@ -31,9 +31,9 @@ export default function Home() {
         <h3 className="text-3xl font-bold text-center text-blue-900 mb-12">Everything You Need For Your Simcha</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center p-6 border rounded-xl shadow-sm">
-            <div className="text-4xl mb-4">📚</div>
-            <h4 className="text-xl font-bold mb-2">Simcha Guide</h4>
-            <p className="text-gray-600">Step by step guidance for every simcha — Lchaim, Tenaim, Wedding, Sheva Brachos and more</p>
+            <div className="text-4xl mb-4">📋</div>
+            <h4 className="text-xl font-bold mb-2">Simcha Checklist</h4>
+            <p className="text-gray-600">Practical checklists for every stage — Lchaim, Tenaim, Wedding, Sheva Brachos and more</p>
           </div>
           <div className="text-center p-6 border rounded-xl shadow-sm">
             <div className="text-4xl mb-4">💰</div>
@@ -59,7 +59,7 @@ export default function Home() {
             <p className="text-blue-300 mb-6">7-day free trial included</p>
             <ul className="text-left text-sm text-blue-200 mb-6 space-y-2">
               <li>✓ Full year of access</li>
-              <li>✓ Simcha Guide</li>
+              <li>✓ Simcha Checklist</li>
               <li>✓ Budget Organizer</li>
               <li>✓ Simcha Magazine</li>
             </ul>
