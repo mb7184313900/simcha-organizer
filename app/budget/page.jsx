@@ -862,15 +862,15 @@ export default function ExpenseTracker() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-semibold">${p.amount.toLocaleString()}</span>
                                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getPaymentTypeColor(p.payment_type)}`}>{p.payment_type}</span>
-                                    {p.is_check && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Check{p.check_date ? ` (${p.check_date})` : ''}</span>}
+                                    {p.is_check && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Check{p.check_date ? ` (${new Date(p.check_date + 'T00:00:00').toLocaleDateString('en-US')})` : ''}</span>}
                                     {p.paid_by && <span className="text-xs text-gray-400">by {p.paid_by}</span>}
                                     {p.payment_method && <span className="text-xs text-gray-400">· {p.payment_method}</span>}
                                     <button onClick={() => setEditingPayment({ ...p })} className="text-blue-500 text-xs hover:underline">✏️</button>
                                     <button onClick={() => deletePayment(p.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
                                   </div>
                                   <div className="text-right text-xs">
-                                    {p.due_date && <p className="text-gray-400">Due: {p.due_date}</p>}
-                                    {p.paid_date && <span className="text-green-600 font-semibold">✓ Paid {p.paid_date}</span>}
+                                    {p.due_date && <p className="text-gray-400">Due: {new Date(p.due_date + 'T00:00:00').toLocaleDateString('en-US')}</p>}
+                                    {p.paid_date && <span className="text-green-600 font-semibold">✓ Paid {new Date(p.paid_date + 'T00:00:00').toLocaleDateString('en-US')}</span>}
                                   </div>
                                 </div>
                               )}
