@@ -491,22 +491,14 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
     URL.revokeObjectURL(url)
   }
 
-  {/* Unchecked items */}
-          <div className="divide-y">
-            {unchecked.map(item => (
-              <ItemRow
-                key={item.text}
-                item={item}
-                isPaid={isPaid}
-                days={null}
-                onToggle={() => toggleCheck(activeList, item.text)}
-                onRemove={() => removeItem(activeList, item.text)}
-                onSetDate={(d) => setItemDate(activeList, item.text, d)}
-                dateInputs={dateInputs}
-                setDateInputs={setDateInputs}
-              />
-            ))}
-          </div>
+  const getSortedItems = (listKey) => {
+    const all = items[listKey] || []
+    const visible = all.filter(i => !i.removed)
+    const withDate = visible.filter(i => i.date && !i.checked).sort((a, b) => new Date(a.date) - new Date(b.date))
+    const unchecked = visible.filter(i => !i.date && !i.checked)
+    const checked = visible.filter(i => i.checked)
+    return { withDate, unchecked, checked }
+  }
 
   const removedList = (items[activeList] || []).filter(i => i.removed)
 
@@ -627,19 +619,32 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
 
           {/* Unchecked items */}
           <div className="divide-y">
-            {unchecked.map(item => (
-              <ItemRow
-                key={item.text}
-                item={item}
-                isPaid={isPaid}
-                days={null}
-                onToggle={() => toggleCheck(activeList, item.text)}
-                onRemove={() => removeItem(activeList, item.text)}
-                onSetDate={(d) => setItemDate(activeList, item.text, d)}
-                dateInputs={dateInputs}
-                setDateInputs={setDateInputs}
-              />
-            ))}
+            {(() => {
+              let lastSection = undefined
+              return unchecked.map(item => {
+                const showHeader = item.section && item.section !== lastSection
+                lastSection = item.section
+                return (
+                  <div key={item.text}>
+                    {showHeader && (
+                      <div className="px-6 pt-4 pb-1 bg-gray-50 text-xs font-bold text-blue-900 uppercase tracking-wide">
+                        {item.section}
+                      </div>
+                    )}
+                    <ItemRow
+                      item={item}
+                      isPaid={isPaid}
+                      days={null}
+                      onToggle={() => toggleCheck(activeList, item.text)}
+                      onRemove={() => removeItem(activeList, item.text)}
+                      onSetDate={(d) => setItemDate(activeList, item.text, d)}
+                      dateInputs={dateInputs}
+                      setDateInputs={setDateInputs}
+                    />
+                  </div>
+                )
+              })
+            })()}
           </div>
 
           {/* Checked items */}
