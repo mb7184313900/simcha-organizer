@@ -437,6 +437,33 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
     })
     await saveItem(listKey, itemText, { removed: false })
   }
+  const removeSection = async (listKey, sectionNames) => {
+    if (!isPaid) return
+    const itemsToRemove = (items[listKey] || []).filter(i => sectionNames.includes(i.section) && !i.removed)
+    setItems(prev => {
+      const updated = prev[listKey].map(i =>
+        sectionNames.includes(i.section) ? { ...i, removed: true } : i
+      )
+      return { ...prev, [listKey]: updated }
+    })
+    for (const item of itemsToRemove) {
+      await saveItem(listKey, item.text, { removed: true })
+    }
+  }
+
+  const addBackSection = async (listKey, sectionNames) => {
+    if (!isPaid) return
+    const itemsToRestore = (items[listKey] || []).filter(i => sectionNames.includes(i.section) && i.removed)
+    setItems(prev => {
+      const updated = prev[listKey].map(i =>
+        sectionNames.includes(i.section) ? { ...i, removed: false } : i
+      )
+      return { ...prev, [listKey]: updated }
+    })
+    for (const item of itemsToRestore) {
+      await saveItem(listKey, item.text, { removed: false })
+    }
+  }
 
   const addCustomItem = async () => {
     if (!isPaid || !newItemText.trim()) return
@@ -626,9 +653,22 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                 lastSection = item.section
                 return (
                   <div key={item.text}>
-                    {showHeader && (
-                      <div className="px-6 pt-4 pb-1 bg-gray-50 text-xs font-bold text-blue-900 uppercase tracking-wide">
-                        {item.section}
+                   {showHeader && (
+                      <div className="px-6 pt-4 pb-1 bg-gray-50 flex justify-between items-center">
+                        <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">{item.section}</span>
+                        {(item.section === "Kallah's Side" || item.section === "Chosson's Side") && (
+                          <button
+                            onClick={() => {
+                              const sections = item.section === "Chosson's Side"
+                                ? ["Chosson's Side", "First Shabbos After the L'chaim"]
+                                : [item.section]
+                              removeSection(activeList, sections)
+                            }}
+                            className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap"
+                          >
+                            Remove entire {item.section}
+                          </button>
+                        )}
                       </div>
                     )}
                     <ItemRow
@@ -698,6 +738,28 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
             </button>
             {showRemoved && (
               <div className="mt-3 bg-white rounded-xl border divide-y shadow-sm">
+                {removedList.some(i => i.section === "Kallah's Side") && (
+                  <div className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
+                    <span className="text-sm font-semibold text-blue-900">Kallah's Side (entire section removed)</span>
+                    <button
+                      onClick={() => addBackSection(activeList, ["Kallah's Side"])}
+                      className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
+                    >
+                      Add back entire Kallah's Side
+                    </button>
+                  </div>
+                )}
+                {removedList.some(i => i.section === "Chosson's Side") && (
+                  <div className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
+                    <span className="text-sm font-semibold text-blue-900">Chosson's Side (entire section removed)</span>
+                    <button
+                      onClick={() => addBackSection(activeList, ["Chosson's Side", "First Shabbos After the L'chaim"])}
+                      className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
+                    >
+                      Add back entire Chosson's Side
+                    </button>
+                  </div>
+                )}
                 {removedList.map(item => (
                   <div key={item.text} className="flex items-center justify-between px-6 py-3 gap-4">
                     <span className="text-sm text-gray-400 line-through">{item.text}</span>
