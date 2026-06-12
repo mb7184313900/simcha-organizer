@@ -93,24 +93,85 @@ const CHECKLISTS = {
     { section: "Chosson's Side → Gifts for the Kallah", text: 'Gifts for the Mechutanim' },
   ],
   'Chosson & Kallah Clothing': [
-    'Wedding dress — order and fittings',
-    'Veil and headpiece',
-    'Shoes for the wedding',
-    'Jewelry for the wedding',
-    'Underpinnings and undergarments',
-    'Hair and makeup trial',
-    'Robe or dressing gown for getting ready',
-    'Something old, new, borrowed, blue',
-    'Chosson\'s suit or frock',
-    'Chosson\'s hat (black hat)',
-    'Chosson\'s gartel',
-    'Chosson\'s kittel',
-    'Chosson\'s shoes',
-    'Chosson\'s tie and shirt',
-    'Vort dress for kallah',
-    'Shabbos Shiva dress(es)',
-    'Sheva Brachos outfits (multiple nights)',
-    'Comfortable shoes for reception',
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Bekeshe' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Tish Bekeshe' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Rezhvolke / Silk Kapote (where customary)' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Extra Vest' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Shabbos Coat' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Shabbos Pants' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Suits' },
+    { section: "Chosson's Side - Shabbos & Yom Tov Clothing", text: 'Extra Pants' },
+    { section: "Chosson's Side - Shoes", text: 'Shabbos Shoes' },
+    { section: "Chosson's Side - Shoes", text: 'Weekday Shoes' },
+    { section: "Chosson's Side - Shoes", text: 'Crocs / Slippers' },
+    { section: "Chosson's Side - Shoes", text: 'Boots' },
+    { section: "Chosson's Side - Shoes", text: 'Overshoes / Rubbers' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Dress Shirts' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Undershirts' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Boxers' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Wool Tzitzis' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Cotton Tzitzis' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Socks' },
+    { section: "Chosson's Side - Shirts & Undergarments", text: 'Pajamas / Nightshirt' },
+    { section: "Chosson's Side - Headwear & Accessories", text: 'Kappel' },
+    { section: "Chosson's Side - Headwear & Accessories", text: 'Schlaf Kappel' },
+    { section: "Chosson's Side - Headwear & Accessories", text: 'Hats' },
+    { section: "Chosson's Side - Headwear & Accessories", text: 'Hat Brush' },
+    { section: "Chosson's Side - Headwear & Accessories", text: 'Comb / Hair Brush' },
+    { section: "Chosson's Side - Headwear & Accessories", text: 'Belt' },
+    { section: "Chosson's Side - Outerwear", text: 'Yeshiva Chalat' },
+    { section: "Chosson's Side - Outerwear", text: 'Shabbos Gartel' },
+    { section: "Chosson's Side - Outerwear", text: 'Sweater' },
+    { section: "Chosson's Side - Outerwear", text: 'Shabbos Scarf' },
+    { section: "Chosson's Side - Outerwear", text: 'Winter Scarf' },
+    { section: "Chosson's Side - Outerwear", text: 'Ear Muffs' },
+    { section: "Chosson's Side - Outerwear", text: 'Raincoat' },
+    { section: "Chosson's Side - Outerwear", text: 'Gloves' },
+    { section: "Chosson's Side - Outerwear", text: 'Umbrella' },
+    { section: "Chosson's Side - Travel & Personal Items", text: 'Garment Bag' },
+    { section: "Chosson's Side - Travel & Personal Items", text: 'Wallet' },
+    { section: "Chosson's Side - Travel & Personal Items", text: 'Swimwear' },
+    { section: "Chosson's Side - Travel & Personal Items", text: 'Eyeglasses / Contact Lenses' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'Wedding Gown' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'Petticoat' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'Crown' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'Veil' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'Headpiece' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'Fur Cape' },
+    { section: "Kallah's Side - Wedding Gown & Accessories", text: 'White Shoes' },
+    { section: "Kallah's Side - Coats & Outerwear", text: 'Spring Jacket' },
+    { section: "Kallah's Side - Coats & Outerwear", text: 'Raincoat' },
+    { section: "Kallah's Side - Coats & Outerwear", text: 'Shabbos Coat' },
+    { section: "Kallah's Side - Coats & Outerwear", text: 'Weekday Coat' },
+    { section: "Kallah's Side - Shoes", text: 'Shabbos Shoes' },
+    { section: "Kallah's Side - Shoes", text: 'Weekday Shoes' },
+    { section: "Kallah's Side - Shoes", text: 'Yom Kippur Shoes' },
+    { section: "Kallah's Side - Shoes", text: 'Boots' },
+    { section: "Kallah's Side - Shoes", text: 'Sneakers' },
+    { section: "Kallah's Side - Shoes", text: 'Slippers / Crocs' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Sheitel / Shpitzel' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Wig Box' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Foam Head' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Travel Wig Stand' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Comb / Wig Brush' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Shabbos Hats, Bands & Tichels' },
+    { section: "Kallah's Side - Head Coverings & Wig Accessories", text: 'Weekday Hats, Bands & Tichels' },
+    { section: "Kallah's Side - Dresses, Tops & Skirts", text: 'Shabbos Dresses (Summer & Winter)' },
+    { section: "Kallah's Side - Dresses, Tops & Skirts", text: 'Weekday Dresses (Summer & Winter)' },
+    { section: "Kallah's Side - Dresses, Tops & Skirts", text: 'Tops' },
+    { section: "Kallah's Side - Dresses, Tops & Skirts", text: 'Skirts' },
+    { section: "Kallah's Side - Dresses, Tops & Skirts", text: 'Shabbos Sheva Brochos Outfits' },
+    { section: "Kallah's Side - Lingerie & Sleepwear", text: 'Bandanas (Shabbos, Weekday & Morning)' },
+    { section: "Kallah's Side - Lingerie & Sleepwear", text: 'Robes (Shabbos, Weekday & Morning)' },
+    { section: "Kallah's Side - Lingerie & Sleepwear", text: 'Hosiery' },
+    { section: "Kallah's Side - Lingerie & Sleepwear", text: 'Undergarments' },
+    { section: "Kallah's Side - Lingerie & Sleepwear", text: 'Nightgowns (Printed & White)' },
+    { section: "Kallah's Side - Lingerie & Sleepwear", text: 'White Tights' },
+    { section: "Kallah's Side - Other Essentials", text: 'Scarf' },
+    { section: "Kallah's Side - Other Essentials", text: 'Gloves' },
+    { section: "Kallah's Side - Other Essentials", text: 'Eyeglasses / Contact Lenses' },
+    { section: "Kallah's Side - Other Essentials", text: 'Cosmetics' },
+    { section: "Kallah's Side - Other Essentials", text: 'Cosmetic Bag' },
   ],
   'Mechutanim & Family': [
     'Mother of kallah — wedding outfit',
@@ -692,18 +753,29 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
           )}
 
           {/* Unchecked items */}
-          <div className="divide-y">
+           <div className="divide-y">
             {(() => {
               let lastSection = undefined
+              let lastTopSectionShown = undefined
               return unchecked.map(item => {
                 const showHeader = item.section && item.section !== lastSection
                 lastSection = item.section
+                let showSideButton = null
+                if (showHeader) {
+                  const topSection = item.section.startsWith("Chosson's Side") && item.section !== "Chosson's Side" ? "Chosson's Side"
+                    : item.section.startsWith("Kallah's Side") && item.section !== "Kallah's Side" ? "Kallah's Side"
+                    : null
+                  if (topSection && topSection !== lastTopSectionShown) {
+                    showSideButton = topSection
+                    lastTopSectionShown = topSection
+                  }
+                }
                 return (
                   <div key={item.text}>
                    {showHeader && (
                       <div className="px-6 pt-4 pb-1 bg-gray-50 flex justify-between items-center">
                         <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">{item.section}</span>
-                          {item.section.startsWith("Kallah's Side") || item.section.startsWith("Chosson's Side") ? (
+                          {item.section === "Kallah's Side" || item.section === "Chosson's Side" ? (
                           <button
                             onClick={() => {
                               const sections = (item.section === "Chosson's Side" && activeList === 'Lchaim')
@@ -714,6 +786,30 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                             className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap"
                           >
                             Remove entire section
+                          </button>
+                       ) : showSideButton === "Chosson's Side" ? (
+                          <button
+                            onClick={() => {
+                              const sections = (items[activeList] || [])
+                                .map(i => i.section)
+                                .filter(s => s && s.startsWith("Chosson's Side"))
+                              removeSection(activeList, [...new Set(sections)])
+                            }}
+                            className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap"
+                          >
+                            Remove entire Chosson's Side
+                          </button>
+                        ) : showSideButton === "Kallah's Side" ? (
+                          <button
+                            onClick={() => {
+                              const sections = (items[activeList] || [])
+                                .map(i => i.section)
+                                .filter(s => s && s.startsWith("Kallah's Side"))
+                              removeSection(activeList, [...new Set(sections)])
+                            }}
+                            className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap"
+                          >
+                            Remove entire Kallah's Side
                           </button>
                         ) : null}
                       </div>
@@ -785,25 +881,68 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
             </button>
             {showRemoved && (
               <div className="mt-3 bg-white rounded-xl border divide-y shadow-sm">
-                {[...new Set(removedList.map(i => i.section))]
-                  .filter(s => s && (s.startsWith("Kallah's Side") || s.startsWith("Chosson's Side")))
-                  .filter(s => (items[activeList] || []).every(i => i.section !== s || i.removed))
-                  .map(section => (
-                    <div key={section} className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
-                      <span className="text-sm font-semibold text-blue-900">{section} (entire section removed)</span>
-                      <button
-                        onClick={() => {
-                          const sections = (section === "Chosson's Side" && activeList === 'Lchaim')
-                            ? ["Chosson's Side", "First Shabbos After the L'chaim"]
-                            : [section]
-                          addBackSection(activeList, sections)
-                        }}
-                        className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
-                      >
-                        Add back entire section
-                      </button>
-                    </div>
-                  ))}
+                 {(() => {
+                  const removedSections = [...new Set(removedList.map(i => i.section).filter(Boolean))]
+                  const buttons = []
+
+                  // Exact "Kallah's Side" / "Chosson's Side" (Lchaim, Tnaim, etc.)
+                  removedSections
+                    .filter(s => (s === "Kallah's Side" || s === "Chosson's Side"))
+                    .filter(s => (items[activeList] || []).every(i => i.section !== s || i.removed))
+                    .forEach(section => {
+                      buttons.push(
+                        <div key={section} className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
+                          <span className="text-sm font-semibold text-blue-900">{section} (entire section removed)</span>
+                          <button
+                            onClick={() => {
+                              const sections = (section === "Chosson's Side" && activeList === 'Lchaim')
+                                ? ["Chosson's Side", "First Shabbos After the L'chaim"]
+                                : [section]
+                              addBackSection(activeList, sections)
+                            }}
+                            className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
+                          >
+                            Add back entire section
+                          </button>
+                        </div>
+                      )
+                    })
+
+                  // Sub-sections like "Kallah's Side - Shoes" — group into whole side
+                  const allSubSections = [...new Set((items[activeList] || []).map(i => i.section).filter(Boolean))]
+                  const chossonSubs = allSubSections.filter(s => s.startsWith("Chosson's Side -"))
+                  const kallahSubs = allSubSections.filter(s => s.startsWith("Kallah's Side -"))
+
+                  if (chossonSubs.length > 0 && chossonSubs.every(s => (items[activeList] || []).every(i => i.section !== s || i.removed))) {
+                    buttons.push(
+                      <div key="chosson-side-all" className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
+                        <span className="text-sm font-semibold text-blue-900">Chosson's Side (entire side removed)</span>
+                        <button
+                          onClick={() => addBackSection(activeList, chossonSubs)}
+                          className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
+                        >
+                          Add back entire Chosson's Side
+                        </button>
+                      </div>
+                    )
+                  }
+
+                  if (kallahSubs.length > 0 && kallahSubs.every(s => (items[activeList] || []).every(i => i.section !== s || i.removed))) {
+                    buttons.push(
+                      <div key="kallah-side-all" className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
+                        <span className="text-sm font-semibold text-blue-900">Kallah's Side (entire side removed)</span>
+                        <button
+                          onClick={() => addBackSection(activeList, kallahSubs)}
+                          className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
+                        >
+                          Add back entire Kallah's Side
+                        </button>
+                      </div>
+                    )
+                  }
+
+                  return buttons
+                })()}
                 {removedList.map(item => (
                   <div key={item.text} className="flex items-center justify-between px-6 py-3 gap-4">
                     <span className="text-sm text-gray-400 line-through">{item.text}</span>
