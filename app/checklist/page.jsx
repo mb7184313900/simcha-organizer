@@ -652,18 +652,6 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
           </div>
         )}
 
-        {CHECKLIST_NOTES[activeList] && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-sm text-blue-700">
-            ℹ️ {CHECKLIST_NOTES[activeList]}
-          </div>
-        )}
-
-        {CHECKLIST_NOTES[activeList] && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-sm text-blue-700">
-            ℹ️ {CHECKLIST_NOTES[activeList]}
-          </div>
-        )}
-
         {/* Active Checklist */}
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden mb-4">
           <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
