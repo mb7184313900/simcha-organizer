@@ -16,16 +16,25 @@ const CHECKLISTS = {
     { section: "First Shabbos After the L'chaim", text: 'Flowers for the Kallah' },
   ],
   'Tnaim': [
-    'Set the date with both families',
-    'Choose a rav to officiate',
-    'Write up the tenaim document',
-    'Arrange a small seudah',
-    'Prepare plate for breaking ceremony',
-    'Invite close family only',
-    'Coordinate with mesader kiddushin',
-    'Arrange for a minyan if needed',
-    'Prepare short divrei Torah',
-    'Order food or catering',
+    { section: "Kallah's Side", text: 'Hall & Catering' },
+    { section: "Kallah's Side", text: 'Tablecloths' },
+    { section: "Kallah's Side", text: 'Dishes, Flatware, Cups & Napkins' },
+    { section: "Kallah's Side", text: 'Cake & Hot Food' },
+    { section: "Kallah's Side", text: 'Liquor & Drinks' },
+    { section: "Kallah's Side", text: 'Fruits & Salads' },
+    { section: "Kallah's Side", text: 'Photographer' },
+    { section: "Kallah's Side", text: 'Hair & Makeup for the Kallah and Family' },
+    { section: "Kallah's Side", text: 'Tnoiyim Document (Shtar Tnoiyim)' },
+    { section: "Kallah's Side", text: 'Rav/Dayan to officiate' },
+    { section: "Kallah's Side", text: 'Plate for Breaking' },
+    { section: "Kallah's Side", text: 'Arrange one Eid (witness), Arev Kablan (guarantor)' },
+    { section: "Kallah's Side", text: 'Invite Family & Friends' },
+    { section: "Chosson's Side", text: 'Diamond Ring' },
+    { section: "Chosson's Side", text: 'Flowers & Poem' },
+    { section: "Chosson's Side", text: 'Mechitanista Cake' },
+    { section: "Chosson's Side", text: 'Invite Family & Friends' },
+    { section: "Chosson's Side", text: 'Arrange one Eid (witness), Arev Kablan (guarantor)' },
+    { section: "Chosson's Side", text: 'Hair & Makeup for the family' },
   ],
   'After Shidduch': [
     'Announce the engagement to family and friends',
@@ -656,10 +665,10 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                    {showHeader && (
                       <div className="px-6 pt-4 pb-1 bg-gray-50 flex justify-between items-center">
                         <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">{item.section}</span>
-                        {(item.section === "Kallah's Side" || item.section === "Chosson's Side") && (
+                         {(item.section === "Kallah's Side" || item.section === "Chosson's Side") && (
                           <button
                             onClick={() => {
-                              const sections = item.section === "Chosson's Side"
+                              const sections = (item.section === "Chosson's Side" && activeList === 'Lchaim')
                                 ? ["Chosson's Side", "First Shabbos After the L'chaim"]
                                 : [item.section]
                               removeSection(activeList, sections)
@@ -753,7 +762,12 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                   <div className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
                     <span className="text-sm font-semibold text-blue-900">Chosson's Side (entire section removed)</span>
                     <button
-                      onClick={() => addBackSection(activeList, ["Chosson's Side", "First Shabbos After the L'chaim"])}
+                      onClick={() => {
+                        const sections = activeList === 'Lchaim'
+                          ? ["Chosson's Side", "First Shabbos After the L'chaim"]
+                          : ["Chosson's Side"]
+                        addBackSection(activeList, sections)
+                      }}
                       className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
                     >
                       Add back entire Chosson's Side
