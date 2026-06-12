@@ -58,15 +58,39 @@ const CHECKLISTS = {
     { section: "Chosson's Side", text: 'Rabbeinu Tam Tefillin' },
   ],
   'Traditional Gifts': [
-    'Chosson gifts to kallah: jewelry (ring, necklace, bracelet)',
-    'Kallah gifts to chosson: watch, cufflinks, or tie',
-    'Mechutanim gift to chosson: suit or hat',
-    'Mechutanim gift to kallah: dress or jewelry',
-    'Vort gift from chosson\'s family to kallah',
-    'Vort gift from kallah\'s family to chosson',
-    'Erev Chasunah gift exchange between chosson & kallah',
-    'Gift of a Siddur or Tehillim',
-    'Family heirlooms or meaningful keepsakes',
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Watch (traditionally given by the Tnoiyim)' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Shas' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Kiddush Becher' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Mishloach Manos' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Pesach Set' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Haggadah' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Flowers for Shavuos' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Challah Cover' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Machzorim' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Esrog Holder' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Menorah' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Megillah' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Tallis & Tallis Bag' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Kittel' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Hand-Knitted Gartel' },
+    { section: "Kallah's Side → Gifts for the Chosson", text: 'Gifts for the Mechutanim' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Bracelet (traditionally given at the Vort/Lechaim)' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Diamond Ring (traditionally given at the Tnoiyim)' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Watch' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Earrings' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Necklace' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Handbag / Evening Bag' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Bosch Mixer' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Baby Album' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Leuchters (Candlesticks)' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Oil Leuchters' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Machzorim' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: "Selichos, Techinos & Tz'enah U'Renah" },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Sheitel Tichel / Shirtzel' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Siddur & Tehillim' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Mishloach Manos' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Haggadah' },
+    { section: "Chosson's Side → Gifts for the Kallah", text: 'Gifts for the Mechutanim' },
   ],
   'Chosson & Kallah Clothing': [
     'Wedding dress — order and fittings',
@@ -277,7 +301,9 @@ const CHECKLISTS = {
     'Challah (or flour to bake)',
   ],
 }
-
+const CHECKLIST_NOTES = {
+  'Traditional Gifts': 'This is a general list and includes some items that are not standard in every family or community.',
+}
 const CHECKLIST_LABELS = {
   'Lchaim': "🥂 L'chaim",
   'Tnaim': '📜 Tnaim',
@@ -620,6 +646,24 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
           ))}
         </div>
 
+        {CHECKLIST_NOTES[activeList] && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-sm text-blue-700">
+            ℹ️ {CHECKLIST_NOTES[activeList]}
+          </div>
+        )}
+
+        {CHECKLIST_NOTES[activeList] && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-sm text-blue-700">
+            ℹ️ {CHECKLIST_NOTES[activeList]}
+          </div>
+        )}
+
+        {CHECKLIST_NOTES[activeList] && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 text-sm text-blue-700">
+            ℹ️ {CHECKLIST_NOTES[activeList]}
+          </div>
+        )}
+
         {/* Active Checklist */}
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden mb-4">
           <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
@@ -671,7 +715,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                    {showHeader && (
                       <div className="px-6 pt-4 pb-1 bg-gray-50 flex justify-between items-center">
                         <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">{item.section}</span>
-                         {(item.section === "Kallah's Side" || item.section === "Chosson's Side") && (
+                          {item.section.startsWith("Kallah's Side") || item.section.startsWith("Chosson's Side") ? (
                           <button
                             onClick={() => {
                               const sections = (item.section === "Chosson's Side" && activeList === 'Lchaim')
@@ -681,9 +725,9 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                             }}
                             className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 px-2 py-0.5 rounded-full whitespace-nowrap"
                           >
-                            Remove entire {item.section}
+                            Remove entire section
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     )}
                     <ItemRow
@@ -753,33 +797,25 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
             </button>
             {showRemoved && (
               <div className="mt-3 bg-white rounded-xl border divide-y shadow-sm">
-                {removedList.some(i => i.section === "Kallah's Side") && (
-                  <div className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
-                    <span className="text-sm font-semibold text-blue-900">Kallah's Side (entire section removed)</span>
-                    <button
-                      onClick={() => addBackSection(activeList, ["Kallah's Side"])}
-                      className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
-                    >
-                      Add back entire Kallah's Side
-                    </button>
-                  </div>
-                )}
-                {removedList.some(i => i.section === "Chosson's Side") && (
-                  <div className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
-                    <span className="text-sm font-semibold text-blue-900">Chosson's Side (entire section removed)</span>
-                    <button
-                      onClick={() => {
-                        const sections = activeList === 'Lchaim'
-                          ? ["Chosson's Side", "First Shabbos After the L'chaim"]
-                          : ["Chosson's Side"]
-                        addBackSection(activeList, sections)
-                      }}
-                      className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
-                    >
-                      Add back entire Chosson's Side
-                    </button>
-                  </div>
-                )}
+                {[...new Set(removedList.map(i => i.section))]
+                  .filter(s => s && (s.startsWith("Kallah's Side") || s.startsWith("Chosson's Side")))
+                  .filter(s => (items[activeList] || []).every(i => i.section !== s || i.removed))
+                  .map(section => (
+                    <div key={section} className="flex items-center justify-between px-6 py-3 gap-4 bg-blue-50">
+                      <span className="text-sm font-semibold text-blue-900">{section} (entire section removed)</span>
+                      <button
+                        onClick={() => {
+                          const sections = (section === "Chosson's Side" && activeList === 'Lchaim')
+                            ? ["Chosson's Side", "First Shabbos After the L'chaim"]
+                            : [section]
+                          addBackSection(activeList, sections)
+                        }}
+                        className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold whitespace-nowrap"
+                      >
+                        Add back entire section
+                      </button>
+                    </div>
+                  ))}
                 {removedList.map(item => (
                   <div key={item.text} className="flex items-center justify-between px-6 py-3 gap-4">
                     <span className="text-sm text-gray-400 line-through">{item.text}</span>
