@@ -6,18 +6,14 @@ import { supabase } from '../../lib/supabase'
 
 const CHECKLISTS = {
   'Lchaim': [
-    'Book a venue or arrange a home gathering',
-    'Set a date with both families',
-    'Create a guest list',
-    'Arrange catering or food platters',
-    'Order a vort cake',
-    'Organize music or background playlist',
-    'Send invitations or make phone calls',
-    'Arrange seating',
-    'Prepare vort speech or divrei Torah',
-    'Coordinate timing with both families',
-    'Arrange flowers or centerpieces',
-    'Prepare l\'chaim drinks and cups',
+    { section: 'Shared', text: 'Payment for the Shadchan' },
+    { section: 'Shared', text: 'Thank-you gifts or payments for additional Shadchanim' },
+    { section: "Kallah's Side", text: 'Arrange the venue (home or hall)' },
+    { section: "Kallah's Side", text: "Cake for the L'chaim" },
+    { section: "Kallah's Side", text: "Liqueur / refreshments for the L'chaim" },
+    { section: "Chosson's Side", text: 'Bracelet for the Kallah' },
+    { section: "Chosson's Side", text: "Cigarettes, pens, and candies for the L'chaim" },
+    { section: "First Shabbos After the L'chaim", text: 'Flowers for the Kallah' },
   ],
   'Tnaim': [
     'Set the date with both families',
@@ -297,18 +293,22 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-      if (!user) {
-        // Not logged in — show free view-only version
-        const initial = {}
-        Object.keys(CHECKLISTS).forEach(k => {
-          initial[k] = CHECKLISTS[k].map(text => ({ text, checked: false, removed: false, date: null, isCustom: false }))
-        })
-        setItems(initial)
-        setLoading(false)
-        return
-      }
+  if (!user) {
+    // Not logged in — show free view-only version
+    const initial = {}
+    Object.keys(CHECKLISTS).forEach(k => {
+      initial[k] = CHECKLISTS[k].map(entry => {
+        const text = typeof entry === 'string' ? entry : entry.text
+        const section = typeof entry === 'string' ? null : entry.section
+        return { text, section, checked: false, removed: false, date: null, isCustom: false }
+      })
+    })
+    setItems(initial)
+    setLoading(false)
+    return
+  }
 
       setUser(user)
 
@@ -329,7 +329,11 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
       } else {
         const initial = {}
         Object.keys(CHECKLISTS).forEach(k => {
-          initial[k] = CHECKLISTS[k].map(text => ({ text, checked: false, removed: false, date: null, isCustom: false }))
+          initial[k] = CHECKLISTS[k].map(entry => {
+            const text = typeof entry === 'string' ? entry : entry.text
+            const section = typeof entry === 'string' ? null : entry.section
+            return { text, section, checked: false, removed: false, date: null, isCustom: false }
+          })
         })
         setItems(initial)
       }
@@ -351,10 +355,13 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
       const savedMap = {}
       saved.forEach(r => { savedMap[r.item_text] = r })
 
-      const defaultItems = CHECKLISTS[listKey].map(text => {
+      const defaultItems = CHECKLISTS[listKey].map(entry => {
+        const text = typeof entry === 'string' ? entry : entry.text
+        const section = typeof entry === 'string' ? null : entry.section
         const s = savedMap[text]
         return {
           text,
+          section,
           checked: s ? s.checked : false,
           removed: s ? s.removed : false,
           date: s ? s.item_date : null,
@@ -484,14 +491,22 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
     URL.revokeObjectURL(url)
   }
 
-  const getSortedItems = (listKey) => {
-    const all = items[listKey] || []
-    const visible = all.filter(i => !i.removed)
-    const withDate = visible.filter(i => i.date && !i.checked).sort((a, b) => new Date(a.date) - new Date(b.date))
-    const unchecked = visible.filter(i => !i.date && !i.checked)
-    const checked = visible.filter(i => i.checked)
-    return { withDate, unchecked, checked }
-  }
+  {/* Unchecked items */}
+          <div className="divide-y">
+            {unchecked.map(item => (
+              <ItemRow
+                key={item.text}
+                item={item}
+                isPaid={isPaid}
+                days={null}
+                onToggle={() => toggleCheck(activeList, item.text)}
+                onRemove={() => removeItem(activeList, item.text)}
+                onSetDate={(d) => setItemDate(activeList, item.text, d)}
+                dateInputs={dateInputs}
+                setDateInputs={setDateInputs}
+              />
+            ))}
+          </div>
 
   const removedList = (items[activeList] || []).filter(i => i.removed)
 
