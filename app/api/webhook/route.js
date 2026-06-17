@@ -22,8 +22,13 @@ export async function POST(req) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const email = session.customer_email;
+    const email = session.customer_email || session.customer_details?.email;
     const plan = session.metadata?.plan || 'one_time';
+
+    if (!email) {
+      console.error('No email found on checkout session', session.id);
+      return new Response('ok', { status: 200 });
+    }
 
     const expires_at = new Date();
     if (plan === 'annual') {
