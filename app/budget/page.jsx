@@ -247,12 +247,14 @@ export default function ExpenseTracker() {
     printWindow.document.close()
   }
 
+  // FIX #3: Status now correctly updates when a vendor is added with an initial payment
   const addVendor = async () => {
     if (!newVendor.name || !newVendor.total_amount) return
     if (!newVendor.category) { alert('Please select a Category'); return }
     if (!newVendor.occasion) { alert('Please select a For occasion'); return }
     if (!newVendor.is_my_expense && !newVendor.is_shared_expense) { alert('Please check either My Expense or Shared Expense'); return }
     const isShared = newVendor.is_shared_expense
+
     const { data } = await supabase.from('vendors').insert({
       name: newVendor.name, category: newVendor.category, occasion: newVendor.occasion,
       total_amount: parseFloat(newVendor.total_amount), is_shared: isShared,
@@ -261,10 +263,14 @@ export default function ExpenseTracker() {
       notes: newVendor.notes, user_id: user.id,
       chosson_family: chossonName, kallah_family: kallaName, status: 'Booked'
     }).select()
+
     const vendorId = data[0].id
+    let finalStatus = 'Booked'
+
     if (newVendor.payment_amount && newVendor.payment_paid_by) {
       const newAmount = parseFloat(newVendor.payment_amount)
-      const paymentType = newAmount >= parseFloat(newVendor.total_amount) ? 'Full Payment' : 'Partial Payment'
+      const totalAmount = parseFloat(newVendor.total_amount)
+      const paymentType = newAmount >= totalAmount ? 'Full Payment' : 'Partial Payment'
       await supabase.from('payments').insert({
         vendor_id: vendorId, amount: newAmount,
         due_date: newVendor.payment_due_date || null, paid_date: newVendor.payment_paid_date || null,
@@ -273,8 +279,13 @@ export default function ExpenseTracker() {
         check_date: newVendor.payment_method === 'Check' ? (newVendor.payment_check_date || null) : null,
         is_paid: true, payment_type: paymentType, description: ''
       })
+      // Calculate correct status based on payment amount
+      finalStatus = getAutoStatus(totalAmount, newAmount)
+      await supabase.from('vendors').update({ status: finalStatus }).eq('id', vendorId)
     }
-    setVendors(prev => [...prev, data[0]])
+
+    const updatedVendor = { ...data[0], status: finalStatus }
+    setVendors(prev => [...prev, updatedVendor])
     await loadPayments(vendorId)
     setShowAddVendor(false)
     setNewVendor({
@@ -286,10 +297,12 @@ export default function ExpenseTracker() {
     showSuccess('Vendor added successfully!')
   }
 
+  // FIX #1 & #2: updateVendor now saves is_shared, category, and occasion changes
   const updateVendor = async (vendor) => {
     await supabase.from('vendors').update({
       name: vendor.name, category: vendor.category, occasion: vendor.occasion,
       total_amount: parseFloat(vendor.total_amount),
+      is_shared: vendor.is_shared,
       vendor_phone: vendor.vendor_phone, vendor_contact: vendor.vendor_contact,
       notes: vendor.notes, split_chosson: parseFloat(vendor.split_chosson), split_kallah: parseFloat(vendor.split_kallah)
     }).eq('id', vendor.id)
@@ -615,108 +628,111 @@ export default function ExpenseTracker() {
               </div>
             </div>
 
+            {/* FIX #4: Mobile modal — scrollable from top so Vendor Name is always reachable */}
             {showAddVendor && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-                <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-xl my-8">
-                  <h3 className="text-xl font-bold text-blue-900 mb-6">Add Vendor</h3>
-                  <div className="space-y-3">
-                    <input placeholder="Vendor name *" value={newVendor.name} onChange={e => setNewVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">Category *</label>
-                      <div className="flex gap-2">
-                        <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="">Select category...</option>
-                          {allCategories.map(c => <option key={c}>{c}</option>)}
-                        </select>
-                        <button onClick={() => setShowAddCategory(!showAddCategory)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+                <div className="flex items-start justify-center min-h-full py-4 px-2">
+                  <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
+                    <h3 className="text-xl font-bold text-blue-900 mb-6">Add Vendor</h3>
+                    <div className="space-y-3">
+                      <input placeholder="Vendor name *" value={newVendor.name} onChange={e => setNewVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">Category *</label>
+                        <div className="flex gap-2">
+                          <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select category...</option>
+                            {allCategories.map(c => <option key={c}>{c}</option>)}
+                          </select>
+                          <button onClick={() => setShowAddCategory(!showAddCategory)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                        </div>
+                        {showAddCategory && (
+                          <div className="flex gap-2 mt-2">
+                            <input placeholder="New category name" value={newCustomCategory} onChange={e => setNewCustomCategory(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <button onClick={addCustomCategory} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                          </div>
+                        )}
                       </div>
-                      {showAddCategory && (
-                        <div className="flex gap-2 mt-2">
-                          <input placeholder="New category name" value={newCustomCategory} onChange={e => setNewCustomCategory(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                          <button onClick={addCustomCategory} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">For *</label>
+                        <div className="flex gap-2">
+                          <select value={newVendor.occasion} onChange={e => setNewVendor(p => ({ ...p, occasion: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select occasion...</option>
+                            {allOccasions.map(o => <option key={o}>{o}</option>)}
+                          </select>
+                          <button onClick={() => setShowAddOccasion(!showAddOccasion)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                        </div>
+                        {showAddOccasion && (
+                          <div className="flex gap-2 mt-2">
+                            <input placeholder="New occasion name" value={newCustomOccasion} onChange={e => setNewCustomOccasion(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <button onClick={addCustomOccasion} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                          </div>
+                        )}
+                      </div>
+                      <input placeholder="Total contracted price *" type="number" value={newVendor.total_amount} onChange={e => setNewVendor(p => ({ ...p, total_amount: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <input placeholder="Vendor phone" value={newVendor.vendor_phone} onChange={e => setNewVendor(p => ({ ...p, vendor_phone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <input placeholder="Contact name" value={newVendor.vendor_contact} onChange={e => setNewVendor(p => ({ ...p, vendor_contact: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <textarea placeholder="Notes (optional)" value={newVendor.notes} onChange={e => setNewVendor(p => ({ ...p, notes: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
+                      <div className="border rounded-lg p-3 space-y-2">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Expense Type *</p>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                          <input type="checkbox" checked={newVendor.is_my_expense} onChange={e => setNewVendor(p => ({ ...p, is_my_expense: e.target.checked, is_shared_expense: e.target.checked ? false : p.is_shared_expense }))} className="accent-blue-900" />
+                          My Expense
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                          <input type="checkbox" checked={newVendor.is_shared_expense} onChange={e => setNewVendor(p => ({ ...p, is_shared_expense: e.target.checked, is_my_expense: e.target.checked ? false : p.is_my_expense }))} className="accent-blue-900" />
+                          Shared Expense
+                        </label>
+                      </div>
+                      {newVendor.is_shared_expense && (
+                        <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+                          <p className="text-sm font-semibold text-blue-900">Split %</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-gray-500">{chossonName} %</label>
+                              <input type="number" value={newVendor.split_chosson} onChange={e => setNewVendor(p => ({ ...p, split_chosson: parseFloat(e.target.value), split_kallah: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500">{kallaName} %</label>
+                              <input type="number" value={newVendor.split_kallah} onChange={e => setNewVendor(p => ({ ...p, split_kallah: parseFloat(e.target.value), split_chosson: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">For *</label>
-                      <div className="flex gap-2">
-                        <select value={newVendor.occasion} onChange={e => setNewVendor(p => ({ ...p, occasion: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="">Select occasion...</option>
-                          {allOccasions.map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <button onClick={() => setShowAddOccasion(!showAddOccasion)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
-                      </div>
-                      {showAddOccasion && (
-                        <div className="flex gap-2 mt-2">
-                          <input placeholder="New occasion name" value={newCustomOccasion} onChange={e => setNewCustomOccasion(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                          <button onClick={addCustomOccasion} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payment (optional)</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input placeholder="Amount" type="number" value={newVendor.payment_amount} onChange={e => setNewVendor(p => ({ ...p, payment_amount: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <select value={newVendor.payment_paid_by || ''} onChange={e => setNewVendor(p => ({ ...p, payment_paid_by: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Who Paid? *</option>
+                            <option>{chossonName}</option>
+                            <option>{kallaName}</option>
+                          </select>
+                          <select value={newVendor.payment_method} onChange={e => setNewVendor(p => ({ ...p, payment_method: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
+                          </select>
                         </div>
-                      )}
-                    </div>
-                    <input placeholder="Total contracted price *" type="number" value={newVendor.total_amount} onChange={e => setNewVendor(p => ({ ...p, total_amount: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input placeholder="Vendor phone" value={newVendor.vendor_phone} onChange={e => setNewVendor(p => ({ ...p, vendor_phone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input placeholder="Contact name" value={newVendor.vendor_contact} onChange={e => setNewVendor(p => ({ ...p, vendor_contact: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <textarea placeholder="Notes (optional)" value={newVendor.notes} onChange={e => setNewVendor(p => ({ ...p, notes: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
-                    <div className="border rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Expense Type *</p>
-                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                        <input type="checkbox" checked={newVendor.is_my_expense} onChange={e => setNewVendor(p => ({ ...p, is_my_expense: e.target.checked, is_shared_expense: e.target.checked ? false : p.is_shared_expense }))} className="accent-blue-900" />
-                        My Expense
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                        <input type="checkbox" checked={newVendor.is_shared_expense} onChange={e => setNewVendor(p => ({ ...p, is_shared_expense: e.target.checked, is_my_expense: e.target.checked ? false : p.is_my_expense }))} className="accent-blue-900" />
-                        Shared Expense
-                      </label>
-                    </div>
-                    {newVendor.is_shared_expense && (
-                      <div className="bg-blue-50 rounded-lg p-4 space-y-2">
-                        <p className="text-sm font-semibold text-blue-900">Split %</p>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-xs text-gray-500">{chossonName} %</label>
-                            <input type="number" value={newVendor.split_chosson} onChange={e => setNewVendor(p => ({ ...p, split_chosson: parseFloat(e.target.value), split_kallah: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <label className="text-xs text-gray-500 block mb-1">Due date</label>
+                            <input type="date" value={newVendor.payment_due_date} onChange={e => setNewVendor(p => ({ ...p, payment_due_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
                           <div>
-                            <label className="text-xs text-gray-500">{kallaName} %</label>
-                            <input type="number" value={newVendor.split_kallah} onChange={e => setNewVendor(p => ({ ...p, split_kallah: parseFloat(e.target.value), split_chosson: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <label className="text-xs text-gray-500 block mb-1">Date paid</label>
+                            <input type="date" value={newVendor.payment_paid_date} onChange={e => setNewVendor(p => ({ ...p, payment_paid_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
                         </div>
+                        {newVendor.payment_method === 'Check' && (
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">Check date</label>
+                            <input type="date" value={newVendor.payment_check_date} onChange={e => setNewVendor(p => ({ ...p, payment_check_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
-                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payment (optional)</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <input placeholder="Amount" type="number" value={newVendor.payment_amount} onChange={e => setNewVendor(p => ({ ...p, payment_amount: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <select value={newVendor.payment_paid_by || ''} onChange={e => setNewVendor(p => ({ ...p, payment_paid_by: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="">Who Paid? *</option>
-                          <option>{chossonName}</option>
-                          <option>{kallaName}</option>
-                        </select>
-                        <select value={newVendor.payment_method} onChange={e => setNewVendor(p => ({ ...p, payment_method: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-gray-500 block mb-1">Due date</label>
-                          <input type="date" value={newVendor.payment_due_date} onChange={e => setNewVendor(p => ({ ...p, payment_due_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 block mb-1">Date paid</label>
-                          <input type="date" value={newVendor.payment_paid_date} onChange={e => setNewVendor(p => ({ ...p, payment_paid_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        </div>
-                      </div>
-                      {newVendor.payment_method === 'Check' && (
-                        <div>
-                          <label className="text-xs text-gray-500 block mb-1">Check date</label>
-                          <input type="date" value={newVendor.payment_check_date} onChange={e => setNewVendor(p => ({ ...p, payment_check_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        </div>
-                      )}
                     </div>
-                  </div>
-                  <div className="flex gap-3 mt-6">
-                    <button onClick={addVendor} className="flex-1 bg-blue-900 text-white py-2 rounded-lg font-semibold">Add Vendor</button>
-                    <button onClick={() => setShowAddVendor(false)} className="flex-1 border py-2 rounded-lg text-gray-600">Cancel</button>
+                    <div className="flex gap-3 mt-6">
+                      <button onClick={addVendor} className="flex-1 bg-blue-900 text-white py-2 rounded-lg font-semibold">Add Vendor</button>
+                      <button onClick={() => setShowAddVendor(false)} className="flex-1 border py-2 rounded-lg text-gray-600">Cancel</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -760,20 +776,53 @@ export default function ExpenseTracker() {
 
                     {isExpanded && (
                       <div className="border-t px-6 py-4 space-y-5">
+                        {/* FIX #1, #2, #3: Edit form now includes Expense Type, Category, and For */}
                         {isEditing ? (
                           <div className="bg-blue-50 rounded-lg p-4 space-y-3">
                             <p className="text-sm font-bold text-blue-900">Edit Vendor</p>
                             <input value={editingVendor.name} onChange={e => setEditingVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Vendor name" />
                             <input value={editingVendor.total_amount} type="number" onChange={e => setEditingVendor(p => ({ ...p, total_amount: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Total contracted price" />
-                            <select value={editingVendor.category} onChange={e => setEditingVendor(p => ({ ...p, category: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                              {allCategories.map(c => <option key={c}>{c}</option>)}
-                            </select>
-                            <select value={editingVendor.occasion || 'General'} onChange={e => setEditingVendor(p => ({ ...p, occasion: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                              {allOccasions.map(o => <option key={o}>{o}</option>)}
-                            </select>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Category</label>
+                              <select value={editingVendor.category} onChange={e => setEditingVendor(p => ({ ...p, category: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                {allCategories.map(c => <option key={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">For</label>
+                              <select value={editingVendor.occasion || 'General'} onChange={e => setEditingVendor(p => ({ ...p, occasion: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                {allOccasions.map(o => <option key={o}>{o}</option>)}
+                              </select>
+                            </div>
                             <input value={editingVendor.vendor_phone || ''} onChange={e => setEditingVendor(p => ({ ...p, vendor_phone: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Phone" />
                             <input value={editingVendor.vendor_contact || ''} onChange={e => setEditingVendor(p => ({ ...p, vendor_contact: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contact name" />
                             <textarea value={editingVendor.notes || ''} onChange={e => setEditingVendor(p => ({ ...p, notes: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} placeholder="Notes" />
+                            <div className="border rounded-lg p-3 space-y-2 bg-white">
+                              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Expense Type</p>
+                              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                <input type="radio" name="edit_expense_type" checked={!editingVendor.is_shared} onChange={() => setEditingVendor(p => ({ ...p, is_shared: false }))} className="accent-blue-900" />
+                                My Expense (Private)
+                              </label>
+                              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                <input type="radio" name="edit_expense_type" checked={!!editingVendor.is_shared} onChange={() => setEditingVendor(p => ({ ...p, is_shared: true }))} className="accent-blue-900" />
+                                Shared Expense
+                              </label>
+                            </div>
+                            {editingVendor.is_shared && (
+                              <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                                <p className="text-sm font-semibold text-blue-900">Split %</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-xs text-gray-500">{chossonName} %</label>
+                                    <input type="number" value={editingVendor.split_chosson} onChange={e => setEditingVendor(p => ({ ...p, split_chosson: parseFloat(e.target.value), split_kallah: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-500">{kallaName} %</label>
+                                    <input type="number" value={editingVendor.split_kallah} onChange={e => setEditingVendor(p => ({ ...p, split_kallah: parseFloat(e.target.value), split_chosson: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             <div className="flex gap-2">
                               <button onClick={() => updateVendor(editingVendor)} className="flex-1 bg-blue-900 text-white py-2 rounded-lg text-sm font-semibold">Save</button>
                               <button onClick={() => setEditingVendor(null)} className="flex-1 border py-2 rounded-lg text-sm text-gray-600">Cancel</button>
