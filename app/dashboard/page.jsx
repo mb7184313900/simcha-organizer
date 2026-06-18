@@ -52,22 +52,38 @@ const [subStatus, setSubStatus] = useState(null)
         setSubStatus(sub.status)
         setDaysLeft(Math.ceil((expires - now) / (1000 * 60 * 60 * 24)))
       } else {
-        setAccess('expired')
-      }
+  setAccess('expired')
+setSubStatus(sub.plan)
+  setSubStatus(sub.plan)
+}
     }
     checkAccess()
   }, [])
 
   if (!user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
-  if (access === 'expired') {
+  if (access === 'expired' && subStatus === 'trial') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow border text-center max-w-md">
+          <div className="text-5xl mb-4">⏰</div>
+          <h2 className="text-2xl font-bold text-blue-900 mb-2">Your free trial has ended</h2>
+          <p className="text-gray-500 mb-6">Activate your account for full access to SimchaPro.</p>
+          <a href="/pricing" className="block bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800">Activate for $99</a>
+        </div>
+      </div>
+    )
+  }
+
+  if (access === 'expired' && subStatus === 'paid') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-xl shadow border text-center max-w-md">
           <div className="text-5xl mb-4">⏰</div>
           <h2 className="text-2xl font-bold text-blue-900 mb-2">Your access has expired</h2>
-          <p className="text-gray-500 mb-6">Renew your subscription to continue using SimchaPro.</p>
+          <p className="text-gray-500 mb-6">Renew your subscription to continue editing. You can still view your data.</p>
           <a href="/renew" className="block bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800">Renew Now</a>
+          <a href="/checklist" className="block mt-3 text-blue-700 underline text-sm">View my checklist (read-only)</a>
         </div>
       </div>
     )
