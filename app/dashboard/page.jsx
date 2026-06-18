@@ -20,13 +20,24 @@ const [subStatus, setSubStatus] = useState(null)
       }
       setUser(user)
 
-      const { data: sub } = await supabase
+      let { data: sub } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('email', user.email)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
+
+      if (!sub) {
+        const { data: subByEmail } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('email', user.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        sub = subByEmail
+      }
 
       if (!sub) {
         setAccess('none')

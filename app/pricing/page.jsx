@@ -1,15 +1,25 @@
 'use client';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function PricingPage() {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleCheckout = async () => {
     setLoading(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan: 'one_time' }),
+      body: JSON.stringify({ plan: 'one_time', user_id: user.id, email: user.email }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;

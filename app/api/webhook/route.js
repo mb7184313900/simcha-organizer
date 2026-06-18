@@ -23,6 +23,7 @@ export async function POST(req) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const email = session.customer_email || session.customer_details?.email;
+    const user_id = session.metadata?.user_id || null;
     const plan = session.metadata?.plan || 'one_time';
 
     if (!email) {
@@ -39,12 +40,26 @@ export async function POST(req) {
       expires_at.setFullYear(expires_at.getFullYear() + 1);
     }
 
-    await supabase.from('subscriptions').insert({
-      email,
-      plan,
-      status: 'active',
-      expires_at: expires_at.toISOString(),
-    });
+    if (user_id) {
+      await supabase.from('subscriptions').upsert(
+        {
+          user_id,
+          email,
+          plan,
+          status: 'active',
+          expires_at: expires_at.toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+    } else {
+      console.error('No user_id found on checkout session metadata', session.id);
+      await supabase.from('subscriptions').insert({
+        email,
+        plan,
+        status: 'active',
+        expires_at: expires_at.toISOString(),
+      });
+    }
   }
 
   return new Response('ok', { status: 200 });
