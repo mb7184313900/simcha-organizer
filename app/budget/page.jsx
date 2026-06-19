@@ -43,6 +43,8 @@ export default function ExpenseTracker() {
     notes: '', receipt_url: '',
     payment_amount: '', payment_method: 'Cash', payment_due_date: '', payment_paid_date: '', payment_check_date: ''
   })
+  const [isSideB, setIsSideB] = useState(false)
+  const [ownerUserId, setOwnerUserId] = useState(null)
   const router = useRouter()
 
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories]
@@ -58,12 +60,25 @@ export default function ExpenseTracker() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
+      const { data: acceptedInvite } = await supabase
+        .from('wedding_invites')
+        .select('*')
+        .eq('accepted_by_user_id', user.id)
+        .eq('status', 'accepted')
+        .maybeSingle()
+
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).single()
       if (fs) {
         setFamilySettings(fs)
         if (fs.custom_categories) setCustomCategories(JSON.parse(fs.custom_categories))
         if (fs.custom_occasions) setCustomOccasions(JSON.parse(fs.custom_occasions))
-        await loadVendors(user.id)
+        if (acceptedInvite) {
+          setIsSideB(true)
+          setOwnerUserId(acceptedInvite.owner_user_id)
+          await loadVendorsSideB(user.id, acceptedInvite.owner_user_id)
+        } else {
+          await loadVendors(user.id)
+        }
       } else {
         setShowFamilySetup(true)
       }
@@ -103,6 +118,19 @@ export default function ExpenseTracker() {
     setVendors(data || [])
     const allPayments = {}
     for (const v of (data || [])) {
+      const { data: p } = await supabase.from('payments').select('*').eq('vendor_id', v.id)
+      allPayments[v.id] = p || []
+    }
+    setPayments(allPayments)
+  }
+
+  const loadVendorsSideB = async (sideBUserId, sideAUserId) => {
+    const { data: sideAVendors } = await supabase.from('vendors').select('*').eq('user_id', sideAUserId).eq('is_shared', true)
+    const { data: sideBVendors } = await supabase.from('vendors').select('*').eq('user_id', sideBUserId)
+    const combined = [...(sideAVendors || []), ...(sideBVendors || [])]
+    setVendors(combined)
+    const allPayments = {}
+    for (const v of combined) {
       const { data: p } = await supabase.from('payments').select('*').eq('vendor_id', v.id)
       allPayments[v.id] = p || []
     }
@@ -546,7 +574,7 @@ export default function ExpenseTracker() {
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
         {/* Invite Side B Panel */}
-        <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+        {!isSideB && <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-blue-900">👨‍👩‍👧 Other Family Access</h3>
             {existingInvite && (
@@ -589,7 +617,7 @@ export default function ExpenseTracker() {
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
