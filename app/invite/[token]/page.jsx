@@ -10,7 +10,6 @@ export default function InvitePage() {
   const [invite, setInvite] = useState(null)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ email: '', password: '' })
-  const [isLogin, setIsLogin] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -36,20 +35,26 @@ export default function InvitePage() {
     try {
       let userId
 
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+      // First try to sign in — if user already exists this will work
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password
+      })
+
+      if (signInError) {
+        // If sign in failed, try to create a new account
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: form.email,
           password: form.password
         })
-        if (error) { setError(error.message); setSubmitting(false); return }
-        userId = data.user.id
+        if (signUpError) {
+          setError(signUpError.message)
+          setSubmitting(false)
+          return
+        }
+        userId = signUpData.user.id
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password
-        })
-        if (error) { setError(error.message); setSubmitting(false); return }
-        userId = data.user.id
+        userId = signInData.user.id
       }
 
       // Mark invite as accepted
@@ -111,8 +116,8 @@ export default function InvitePage() {
     </div>
   )
 
-  const chossonFamily = invite.owner_side === 'chosson' ? invite.owner_family_name : null
-  const kallahFamily = invite.owner_side === 'kallah' ? invite.owner_family_name : null
+  const chossonFamily = invite.owner_side === 'chosson' ? invite.owner_family_name : invite.other_family_name
+  const kallahFamily = invite.owner_side === 'kallah' ? invite.owner_family_name : invite.other_family_name
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -121,23 +126,9 @@ export default function InvitePage() {
         <p className="text-gray-500 text-sm mb-1">
           The <strong>{invite.owner_family_name}</strong> family invited you to collaborate on SimchaPro.
         </p>
-        {chossonFamily && <p className="text-gray-500 text-sm mb-6">Wedding: <strong>{chossonFamily} & {invite.invited_email}</strong></p>}
-        {kallahFamily && <p className="text-gray-500 text-sm mb-6">Wedding: <strong>{invite.invited_email} & {kallahFamily}</strong></p>}
-
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setIsLogin(false)}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-all ${!isLogin ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900'}`}
-          >
-            Create Account
-          </button>
-          <button
-            onClick={() => setIsLogin(true)}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-all ${isLogin ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900'}`}
-          >
-            I Have an Account
-          </button>
-        </div>
+        <p className="text-gray-500 text-sm mb-6">
+          Wedding: <strong>{invite.owner_side === 'chosson' ? `${invite.owner_family_name} & ${invite.owner_family_name === chossonFamily ? kallahFamily : chossonFamily}` : `${chossonFamily} & ${kallahFamily}`}</strong>
+        </p>
 
         <div className="space-y-3">
           <input
@@ -160,7 +151,7 @@ export default function InvitePage() {
             disabled={submitting}
             className="w-full bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800 disabled:opacity-50"
           >
-            {submitting ? 'Please wait...' : isLogin ? 'Sign In & Accept' : 'Create Account & Accept'}
+            {submitting ? 'Please wait...' : 'Accept Invitation'}
           </button>
         </div>
 
