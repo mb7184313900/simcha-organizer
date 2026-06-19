@@ -174,6 +174,57 @@ export default function ExpenseTracker() {
     showSuccess('Note deleted!')
   }
 
+  const [showInviteForm, setShowInviteForm] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteStatus, setInviteStatus] = useState('')
+  const [existingInvite, setExistingInvite] = useState(null)
+
+  useEffect(() => {
+    const loadInvite = async () => {
+      if (!user) return
+      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).single()
+      if (data) setExistingInvite(data)
+    }
+    loadInvite()
+  }, [user])
+
+  const sendInvite = async () => {
+    if (!inviteEmail) return
+    setInviteStatus('sending')
+    const res = await fetch('/api/invite/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invitedEmail: inviteEmail,
+        ownerUserId: user.id,
+        ownerFamilyName: myFamilyName,
+        ownerSide: familySettings.my_side,
+        chossonFamily: chossonName,
+        kallahFamily: kallaName
+      })
+    })
+    const result = await res.json()
+    if (result.success) {
+      setInviteStatus('sent')
+      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).single()
+      setExistingInvite(data)
+    } else {
+      setInviteStatus('error')
+    }
+  }
+
+  const revokeInvite = async () => {
+    await supabase.from('wedding_invites').update({ status: 'revoked' }).eq('owner_user_id', user.id)
+    setExistingInvite(prev => ({ ...prev, status: 'revoked' }))
+    showSuccess('Access revoked.')
+  }
+
+  const reinstateInvite = async () => {
+    await supabase.from('wedding_invites').update({ status: 'accepted' }).eq('owner_user_id', user.id)
+    setExistingInvite(prev => ({ ...prev, status: 'accepted' }))
+    showSuccess('Access reinstated.')
+  }
+
   const generateShareLink = async () => {
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     await supabase.from('shared_links').insert({
@@ -493,6 +544,52 @@ export default function ExpenseTracker() {
       <div className="max-w-4xl mx-auto px-8 py-10">
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
+
+        {/* Invite Side B Panel */}
+        <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-blue-900">👨‍👩‍👧 Other Family Access</h3>
+            {existingInvite && (
+              <span className={`text-xs px-2 py-1 rounded-full font-semibold ${existingInvite.status === 'accepted' ? 'bg-green-100 text-green-700' : existingInvite.status === 'revoked' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'}`}>
+                {existingInvite.status === 'accepted' ? '✓ Connected' : existingInvite.status === 'revoked' ? 'Revoked' : '⏳ Pending'}
+              </span>
+            )}
+          </div>
+          {!existingInvite && (
+            <>
+              <p className="text-sm text-gray-500 mb-3">Invite the other family to view and add shared expenses.</p>
+              {!showInviteForm ? (
+                <button onClick={() => setShowInviteForm(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Invite Other Family</button>
+              ) : (
+                <div className="flex gap-2">
+                  <input type="email" placeholder="Their email address" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <button onClick={sendInvite} disabled={inviteStatus === 'sending'} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800 disabled:opacity-50">
+                    {inviteStatus === 'sending' ? 'Sending...' : 'Send Invite'}
+                  </button>
+                  <button onClick={() => setShowInviteForm(false)} className="border px-3 py-2 rounded-lg text-sm text-gray-600">Cancel</button>
+                </div>
+              )}
+              {inviteStatus === 'sent' && <p className="text-green-600 text-sm mt-2">✓ Invitation sent!</p>}
+              {inviteStatus === 'error' && <p className="text-red-500 text-sm mt-2">Something went wrong. Please try again.</p>}
+            </>
+          )}
+          {existingInvite && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">Invited: <span className="font-semibold">{existingInvite.invited_email}</span></p>
+              <div className="flex gap-2 flex-wrap">
+                {existingInvite.status === 'revoked' && (
+                  <>
+                    <button onClick={reinstateInvite} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700">Reinstate Access</button>
+                    <button onClick={() => { setExistingInvite(null); setInviteEmail(''); setInviteStatus('') }} className="bg-blue-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-800">Send New Invite</button>
+                  </>
+                )}
+                {existingInvite.status !== 'revoked' && (
+                  <button onClick={revokeInvite} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-600">Revoke Access</button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
