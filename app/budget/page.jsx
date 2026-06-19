@@ -564,7 +564,7 @@ export default function ExpenseTracker() {
         <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
-          <button onClick={generateShareLink} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-green-700">🔗 Share Link</button>
+          
           <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">📄 Shared Report</button>
           <button onClick={() => exportPDF('full')} className="bg-yellow-400 text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300">📄 My Full Report</button>
         </div>
