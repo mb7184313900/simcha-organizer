@@ -359,7 +359,8 @@ export default function ExpenseTracker() {
       total_amount: parseFloat(newVendor.total_amount), is_shared: isShared,
       split_chosson: parseFloat(newVendor.split_chosson), split_kallah: parseFloat(newVendor.split_kallah),
       vendor_phone: newVendor.vendor_phone, vendor_contact: newVendor.vendor_contact,
-      notes: newVendor.notes, user_id: user.id,
+      notes: newVendor.notes, user_id: isSideB ? ownerUserId : user.id,
+      entered_by_user_id: user.id,
       chosson_family: chossonName, kallah_family: kallaName, status: 'Booked'
     }).select()
 
@@ -922,6 +923,15 @@ export default function ExpenseTracker() {
                     {isExpanded && (
                       <div className="border-t px-6 py-4 space-y-5">
                         {/* FIX #1, #2, #3: Edit form now includes Expense Type, Category, and For */}
+                        {/* Entered by tag */}
+                        {vendor.is_shared && (
+                          <p className="text-xs text-gray-400 mb-1">
+                            Entered by: <span className="font-semibold text-blue-800">
+                              {vendor.entered_by_user_id === user.id ? `${myFamilyName} (you)` : familySettings?.other_family_name}
+                            </span>
+                          </p>
+                        )}
+
                         {isEditing ? (
                           <div className="bg-blue-50 rounded-lg p-4 space-y-3">
                             <p className="text-sm font-bold text-blue-900">Edit Vendor</p>
@@ -974,7 +984,10 @@ export default function ExpenseTracker() {
                             </div>
                           </div>
                         ) : (
-                          <button onClick={e => { e.stopPropagation(); setEditingVendor({ ...vendor }) }} className="text-blue-600 text-xs hover:underline">✏️ Edit vendor info</button>
+                          {/* Only show edit button if Side A (owner) or if this user entered the vendor */}
+                          ((!isSideB || vendor.entered_by_user_id === user.id) && (
+                            <button onClick={e => { e.stopPropagation(); setEditingVendor({ ...vendor }) }} className="text-blue-600 text-xs hover:underline">✏️ Edit vendor info</button>
+                          ))
                         )}
 
                         {vendor.is_shared && (
@@ -1128,7 +1141,9 @@ export default function ExpenseTracker() {
                           </div>
                         </div>
 
-                        <button onClick={() => deleteVendor(vendor.id)} className="text-red-400 hover:text-red-600 text-xs">Delete vendor</button>
+                        {(!isSideB || vendor.entered_by_user_id === user.id) && (
+                          <button onClick={() => deleteVendor(vendor.id)} className="text-red-400 hover:text-red-600 text-xs">Delete vendor</button>
+                        )}
                       </div>
                     )}
                   </div>
