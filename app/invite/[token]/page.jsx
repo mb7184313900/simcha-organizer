@@ -35,14 +35,14 @@ export default function InvitePage() {
     try {
       let userId
 
-      // First try to sign in — if user already exists this will work
+      // First try to sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: form.email,
         password: form.password
       })
 
       if (signInError) {
-        // If sign in failed, try to create a new account
+        // Try to create a new account
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: form.email,
           password: form.password
@@ -57,39 +57,18 @@ export default function InvitePage() {
         userId = signInData.user.id
       }
 
-      // Mark invite as accepted
-      await supabase.from('wedding_invites').update({
-        status: 'accepted',
-        accepted_by_user_id: userId
-      }).eq('invite_token', token)
+      // Call server API to accept invite and create family settings using service role
+      const res = await fetch('/api/invite/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, inviteToken: token })
+      })
 
-      // Copy owner's family_settings into Side B's account
-      const { data: ownerSettings } = await supabase
-        .from('family_settings')
-        .select('*')
-        .eq('user_id', invite.owner_user_id)
-        .single()
-
-      if (ownerSettings) {
-        const sideBSide = ownerSettings.my_side === 'chosson' ? 'kallah' : 'chosson'
-        // Try insert first, then update if exists
-        const { error: insertError } = await supabase.from('family_settings').insert({
-          user_id: userId,
-          my_side: sideBSide,
-          my_family_name: ownerSettings.other_family_name,
-          other_family_name: ownerSettings.my_family_name,
-          custom_categories: ownerSettings.custom_categories,
-          custom_occasions: ownerSettings.custom_occasions
-        })
-        if (insertError) {
-          await supabase.from('family_settings').update({
-            my_side: sideBSide,
-            my_family_name: ownerSettings.other_family_name,
-            other_family_name: ownerSettings.my_family_name,
-            custom_categories: ownerSettings.custom_categories,
-            custom_occasions: ownerSettings.custom_occasions
-          }).eq('user_id', userId)
-        }
+      const result = await res.json()
+      if (!result.success) {
+        setError('Something went wrong. Please try again.')
+        setSubmitting(false)
+        return
       }
 
       router.push('/dashboard')
@@ -137,7 +116,7 @@ export default function InvitePage() {
           The <strong>{invite.owner_family_name}</strong> family invited you to collaborate on SimchaPro.
         </p>
         <p className="text-gray-500 text-sm mb-6">
-          Wedding: <strong>{invite.owner_side === 'chosson' ? `${invite.owner_family_name} & ${invite.owner_family_name === chossonFamily ? kallahFamily : chossonFamily}` : `${chossonFamily} & ${kallahFamily}`}</strong>
+          Wedding: <strong>{invite.owner_side === 'chosson' ? `${invite.owner_family_name} & ${kallahFamily}` : `${chossonFamily} & ${invite.owner_family_name}`}</strong>
         </p>
 
         <div className="space-y-3">
