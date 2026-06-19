@@ -370,7 +370,7 @@ export default function ExpenseTracker() {
       total_amount: parseFloat(newVendor.total_amount), is_shared: isShared,
       split_chosson: parseFloat(newVendor.split_chosson), split_kallah: parseFloat(newVendor.split_kallah),
       vendor_phone: newVendor.vendor_phone, vendor_contact: newVendor.vendor_contact,
-      notes: newVendor.notes, user_id: isSideB ? ownerUserId : user.id,
+      notes: newVendor.notes, user_id: (isSideB && newVendor.is_shared_expense) ? ownerUserId : user.id,
       entered_by_user_id: user.id,
       chosson_family: chossonName, kallah_family: kallaName, status: 'Booked'
     }).select()
