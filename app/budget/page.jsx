@@ -984,10 +984,11 @@ export default function ExpenseTracker() {
                             </div>
                           </div>
                         ) : (
-                          {/* Only show edit button if Side A (owner) or if this user entered the vendor */}
-                          ((!isSideB || vendor.entered_by_user_id === user.id) && (
+                          (!isSideB || vendor.entered_by_user_id === user.id) ? (
                             <button onClick={e => { e.stopPropagation(); setEditingVendor({ ...vendor }) }} className="text-blue-600 text-xs hover:underline">✏️ Edit vendor info</button>
-                          ))
+                          ) : (
+                            <p className="text-xs text-gray-400">✏️ Entered by the other family</p>
+                          )
                         )}
 
                         {vendor.is_shared && (
