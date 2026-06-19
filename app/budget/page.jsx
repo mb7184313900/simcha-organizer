@@ -136,6 +136,7 @@ export default function ExpenseTracker() {
         .select('*')
         .eq('user_id', invite.accepted_by_user_id)
         .eq('is_shared', true)
+        .eq('entered_by_user_id', invite.accepted_by_user_id)
       sideBVendors = bVendors || []
     }
 
