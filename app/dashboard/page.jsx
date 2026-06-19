@@ -20,6 +20,20 @@ const [subStatus, setSubStatus] = useState(null)
       }
       setUser(user)
 
+      // Check if this user is Side B (accepted an invite from someone else)
+      const { data: invite } = await supabase
+        .from('wedding_invites')
+        .select('*')
+        .eq('accepted_by_user_id', user.id)
+        .eq('status', 'accepted')
+        .maybeSingle()
+
+      if (invite) {
+        setAccess('active')
+        setSubStatus('sideb')
+        return
+      }
+
       let { data: sub } = await supabase
         .from('subscriptions')
         .select('*')
