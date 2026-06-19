@@ -611,6 +611,21 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
 
       setUser(user)
 
+      // Check if Side B (accepted an invite)
+      const { data: invite } = await supabase
+        .from('wedding_invites')
+        .select('*')
+        .eq('accepted_by_user_id', user.id)
+        .eq('status', 'accepted')
+        .maybeSingle()
+
+      if (invite) {
+        setIsPaid(true)
+        await loadUserData(user.id)
+        setLoading(false)
+        return
+      }
+
       const { data: sub } = await supabase
         .from('subscriptions')
         .select('*')

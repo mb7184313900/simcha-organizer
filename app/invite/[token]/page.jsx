@@ -72,14 +72,24 @@ export default function InvitePage() {
 
       if (ownerSettings) {
         const sideBSide = ownerSettings.my_side === 'chosson' ? 'kallah' : 'chosson'
-        await supabase.from('family_settings').upsert({
+        // Try insert first, then update if exists
+        const { error: insertError } = await supabase.from('family_settings').insert({
           user_id: userId,
           my_side: sideBSide,
           my_family_name: ownerSettings.other_family_name,
           other_family_name: ownerSettings.my_family_name,
           custom_categories: ownerSettings.custom_categories,
           custom_occasions: ownerSettings.custom_occasions
-        }, { onConflict: 'user_id' })
+        })
+        if (insertError) {
+          await supabase.from('family_settings').update({
+            my_side: sideBSide,
+            my_family_name: ownerSettings.other_family_name,
+            other_family_name: ownerSettings.my_family_name,
+            custom_categories: ownerSettings.custom_categories,
+            custom_occasions: ownerSettings.custom_occasions
+          }).eq('user_id', userId)
+        }
       }
 
       router.push('/dashboard')
