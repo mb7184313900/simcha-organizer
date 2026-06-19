@@ -114,10 +114,30 @@ export default function ExpenseTracker() {
   }
 
   const loadVendors = async (userId) => {
-    const { data } = await supabase.from('vendors').select('*').eq('user_id', userId)
-    setVendors(data || [])
+    const { data: myVendors } = await supabase.from('vendors').select('*').eq('user_id', userId)
+
+    // Also load shared vendors entered by Side B (if they accepted an invite from us)
+    const { data: invite } = await supabase
+      .from('wedding_invites')
+      .select('*')
+      .eq('owner_user_id', userId)
+      .eq('status', 'accepted')
+      .maybeSingle()
+
+    let sideBVendors = []
+    if (invite?.accepted_by_user_id) {
+      const { data: bVendors } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('user_id', invite.accepted_by_user_id)
+        .eq('is_shared', true)
+      sideBVendors = bVendors || []
+    }
+
+    const combined = [...(myVendors || []), ...sideBVendors]
+    setVendors(combined)
     const allPayments = {}
-    for (const v of (data || [])) {
+    for (const v of combined) {
       const { data: p } = await supabase.from('payments').select('*').eq('vendor_id', v.id)
       allPayments[v.id] = p || []
     }
