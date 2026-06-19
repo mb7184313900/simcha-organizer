@@ -44,6 +44,7 @@ export default function ExpenseTracker() {
     payment_amount: '', payment_method: 'Cash', payment_due_date: '', payment_paid_date: '', payment_check_date: ''
   })
   const [isSideB, setIsSideB] = useState(false)
+  const [isRevoked, setIsRevoked] = useState(false)
   const [ownerUserId, setOwnerUserId] = useState(null)
   const router = useRouter()
 
@@ -64,7 +65,6 @@ export default function ExpenseTracker() {
         .from('wedding_invites')
         .select('*')
         .eq('accepted_by_user_id', user.id)
-        .eq('status', 'accepted')
         .maybeSingle()
 
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).single()
@@ -75,7 +75,12 @@ export default function ExpenseTracker() {
         if (acceptedInvite) {
           setIsSideB(true)
           setOwnerUserId(acceptedInvite.owner_user_id)
-          await loadVendorsSideB(user.id, acceptedInvite.owner_user_id)
+          if (acceptedInvite.status === 'revoked') {
+            setIsRevoked(true)
+            await loadVendors(user.id)
+          } else {
+            await loadVendorsSideB(user.id, acceptedInvite.owner_user_id)
+          }
         } else {
           await loadVendors(user.id)
         }
@@ -239,6 +244,10 @@ export default function ExpenseTracker() {
   const sendInvite = async () => {
     if (!inviteEmail) return
     setInviteStatus('sending')
+
+    // Delete any existing invite first so we start fresh
+    await supabase.from('wedding_invites').delete().eq('owner_user_id', user.id)
+
     const res = await fetch('/api/invite/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -254,7 +263,8 @@ export default function ExpenseTracker() {
     const result = await res.json()
     if (result.success) {
       setInviteStatus('sent')
-      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).single()
+      setShowInviteForm(false)
+      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).maybeSingle()
       setExistingInvite(data)
     } else {
       setInviteStatus('error')
@@ -594,6 +604,15 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
+        {/* Revoked Side B banner */}
+        {isSideB && isRevoked && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
+            <h3 className="font-bold text-red-700 mb-1">⚠️ Your access has been revoked</h3>
+            <p className="text-red-600 text-sm mb-4">The other family has revoked your shared access. You can still view your own private expenses below, but you cannot add or edit anything. To regain full access, contact the other family or get your own SimchaPro account.</p>
+            <a href="/pricing" className="inline-block bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">Get Full Access — $99</a>
+          </div>
+        )}
+
         {/* Invite Side B Panel */}
         {!isSideB && <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
@@ -642,9 +661,9 @@ export default function ExpenseTracker() {
 
         <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
-          <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>
-          <button onClick={async () => { setTab('checks'); await loadAllPayments(vendors) }} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'checks' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📋 Check Tracker</button>
-          <button onClick={() => setTab('breakdown')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'breakdown' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📊 Breakdown</button>
+          {!(isSideB && isRevoked) && <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>}
+          {!(isSideB && isRevoked) && <button onClick={async () => { setTab('checks'); await loadAllPayments(vendors) }} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'checks' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📋 Check Tracker</button>}
+          {!(isSideB && isRevoked) && <button onClick={() => setTab('breakdown')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'breakdown' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📊 Breakdown</button>}
         </div>
 
         {tab === 'checks' && (
@@ -770,7 +789,7 @@ export default function ExpenseTracker() {
                   <option value="category">Sort: Category</option>
                   <option value="occasion">Sort: For</option>
                 </select>
-                <button onClick={() => setShowAddVendor(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Add Vendor</button>
+                {!(isSideB && isRevoked) && <button onClick={() => setShowAddVendor(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Add Vendor</button>}
               </div>
             </div>
 
