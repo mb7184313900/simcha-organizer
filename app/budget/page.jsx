@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import { getAccessStatus } from '../../lib/accessControl'
 
 const DEFAULT_CATEGORIES = ['Hall', 'Catering', 'Music', 'Photography', 'Flowers', 'Clothing', 'Invitations', 'Transportation', 'Other']
 const DEFAULT_OCCASIONS = ['Shadchen', 'Lchaim/Vort', 'Tenaim', 'Aufruf', 'Wedding', 'Shabbos Sheva Brachos', 'Sheva Brachos', 'Gifts', 'Apartment', 'Furniture', 'General']
@@ -10,6 +11,7 @@ const PAYMENT_METHODS = ['Cash', 'Check', 'Zelle', 'Wire Transfer', 'Credit Card
 
 export default function ExpenseTracker() {
   const [user, setUser] = useState(null)
+  const [access, setAccess] = useState(null)
   const [tab, setTab] = useState('my')
   const [sortBy, setSortBy] = useState('name')
   const [filterOccasion, setFilterOccasion] = useState('All')
@@ -43,10 +45,12 @@ export default function ExpenseTracker() {
     notes: '', receipt_url: '',
     payment_amount: '', payment_method: 'Cash', payment_due_date: '', payment_paid_date: '', payment_check_date: ''
   })
-  const [isSideB, setIsSideB] = useState(false)
-  const [isRevoked, setIsRevoked] = useState(false)
-  const [ownerUserId, setOwnerUserId] = useState(null)
   const router = useRouter()
+
+  const isSideB = access?.isSideB || false
+  const isRevoked = access?.state === 'revoked'
+  const ownerUserId = access?.ownerUserId || null
+  const canEdit = access?.canEdit || false
 
   const allCategories = [...DEFAULT_CATEGORIES, ...customCategories]
   const allOccasions = [...DEFAULT_OCCASIONS, ...customOccasions]
@@ -61,25 +65,25 @@ export default function ExpenseTracker() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
-      const { data: acceptedInvite } = await supabase
-        .from('wedding_invites')
-        .select('*')
-        .eq('accepted_by_user_id', user.id)
-        .maybeSingle()
+
+      const status = await getAccessStatus(user)
+      setAccess(status)
+
+      if (!status.hasDataAccess) {
+        router.push('/dashboard')
+        return
+      }
 
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).single()
       if (fs) {
         setFamilySettings(fs)
         if (fs.custom_categories) setCustomCategories(JSON.parse(fs.custom_categories))
         if (fs.custom_occasions) setCustomOccasions(JSON.parse(fs.custom_occasions))
-        if (acceptedInvite) {
-          setIsSideB(true)
-          setOwnerUserId(acceptedInvite.owner_user_id)
-          if (acceptedInvite.status === 'revoked') {
-            setIsRevoked(true)
+        if (status.isSideB) {
+          if (status.state === 'revoked') {
             await loadVendors(user.id)
           } else {
-            await loadVendorsSideB(user.id, acceptedInvite.owner_user_id)
+            await loadVendorsSideB(user.id, status.ownerUserId)
           }
         } else {
           await loadVendors(user.id)
@@ -101,6 +105,7 @@ export default function ExpenseTracker() {
   }
 
   const addCustomCategory = async () => {
+    if (!canEdit) return
     if (!newCustomCategory.trim()) return
     const updated = [...customCategories, newCustomCategory.trim()]
     setCustomCategories(updated)
@@ -110,6 +115,7 @@ export default function ExpenseTracker() {
   }
 
   const addCustomOccasion = async () => {
+    if (!canEdit) return
     if (!newCustomOccasion.trim()) return
     const updated = [...customOccasions, newCustomOccasion.trim()]
     setCustomOccasions(updated)
@@ -201,6 +207,7 @@ export default function ExpenseTracker() {
   }
 
   const addNote = async (vendorId) => {
+    if (!canEdit) return
     const text = newNote[vendorId]
     if (!text?.trim()) return
     const { data } = await supabase.from('vendor_comments').insert({
@@ -212,6 +219,7 @@ export default function ExpenseTracker() {
   }
 
   const updateNote = async (note) => {
+    if (!canEdit) return
     if (!editingNote?.comment?.trim()) return
     await supabase.from('vendor_comments').update({ comment: editingNote.comment }).eq('id', note.id)
     setNotes(prev => ({
@@ -223,6 +231,7 @@ export default function ExpenseTracker() {
   }
 
   const deleteNote = async (noteId, vendorId) => {
+    if (!canEdit) return
     await supabase.from('vendor_comments').delete().eq('id', noteId)
     setNotes(prev => ({ ...prev, [vendorId]: prev[vendorId].filter(n => n.id !== noteId) }))
     showSuccess('Note deleted!')
@@ -242,6 +251,8 @@ export default function ExpenseTracker() {
     loadInvite()
   }, [user])
 
+  // Note: Invite management (send/revoke/reinstate) is intentionally NOT gated by canEdit.
+  // Side A can always manage shared access for the other family, even after edit access has expired.
   const sendInvite = async () => {
     if (!inviteEmail) return
     setInviteStatus('sending')
@@ -285,6 +296,7 @@ export default function ExpenseTracker() {
   }
 
   const generateShareLink = async () => {
+    if (!canEdit) return
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     await supabase.from('shared_links').insert({
       owner_user_id: user.id, link_token: token,
@@ -357,8 +369,8 @@ export default function ExpenseTracker() {
     printWindow.document.close()
   }
 
-  // FIX #3: Status now correctly updates when a vendor is added with an initial payment
   const addVendor = async () => {
+    if (!canEdit) return
     if (!newVendor.name || !newVendor.total_amount) return
     if (!newVendor.category) { alert('Please select a Category'); return }
     if (!newVendor.occasion) { alert('Please select a For occasion'); return }
@@ -390,7 +402,6 @@ export default function ExpenseTracker() {
         check_date: newVendor.payment_method === 'Check' ? (newVendor.payment_check_date || null) : null,
         is_paid: true, payment_type: paymentType, description: ''
       })
-      // Calculate correct status based on payment amount
       finalStatus = getAutoStatus(totalAmount, newAmount)
       await supabase.from('vendors').update({ status: finalStatus }).eq('id', vendorId)
     }
@@ -408,8 +419,8 @@ export default function ExpenseTracker() {
     showSuccess('Vendor added successfully!')
   }
 
-  // FIX #1 & #2: updateVendor now saves is_shared, category, and occasion changes
   const updateVendor = async (vendor) => {
+    if (!canEdit) return
     await supabase.from('vendors').update({
       name: vendor.name, category: vendor.category, occasion: vendor.occasion,
       total_amount: parseFloat(vendor.total_amount),
@@ -423,12 +434,14 @@ export default function ExpenseTracker() {
   }
 
   const deleteVendor = async (id) => {
+    if (!canEdit) return
     await supabase.from('vendors').delete().eq('id', id)
     setVendors(prev => prev.filter(v => v.id !== id))
     setExpandedVendor(null)
   }
 
   const addPayment = async (vendor) => {
+    if (!canEdit) return
     const p = newPayment[vendor.id]
     if (!p?.amount) return
     if (!p?.paid_by) { alert('Who Paid is required'); return }
@@ -455,6 +468,7 @@ export default function ExpenseTracker() {
   }
 
   const updatePayment = async (payment) => {
+    if (!canEdit) return
     await supabase.from('payments').update({
       amount: parseFloat(payment.amount), paid_by: payment.paid_by,
       payment_method: payment.payment_method, due_date: payment.due_date || null,
@@ -467,11 +481,13 @@ export default function ExpenseTracker() {
   }
 
   const deletePayment = async (paymentId, vendorId) => {
+    if (!canEdit) return
     await supabase.from('payments').delete().eq('id', paymentId)
     setPayments(prev => ({ ...prev, [vendorId]: prev[vendorId].filter(x => x.id !== paymentId) }))
   }
 
   const addAddon = async (vendor) => {
+    if (!canEdit) return
     const a = newAddon[vendor.id]
     if (!a?.amount || !a?.description) return
     const { data } = await supabase.from('payments').insert({
@@ -605,8 +621,27 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
+        {/* Read-only banner — edit access expired (1-year window passed) */}
+        {access?.state === 'expired' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-yellow-800">⏰ {isSideB ? 'Edit access has expired' : 'Your edit access has expired'}</p>
+              <p className="text-yellow-700 text-sm">
+                {isSideB
+                  ? "You're viewing this expense tracker in read-only mode. Ask the wedding owner to renew to make changes again."
+                  : "You're viewing this expense tracker in read-only mode. Renew to add or edit expenses."}
+              </p>
+            </div>
+            {!isSideB && (
+              <a href="/renew" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
+                Renew Now
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Revoked Side B banner */}
-        {isSideB && isRevoked && (
+        {isRevoked && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
             <h3 className="font-bold text-red-700 mb-1">⚠️ Your access has been revoked</h3>
             <p className="text-red-600 text-sm mb-4">The other family has revoked your shared access. You can still view your own private expenses below, but you cannot add or edit anything. To regain full access, contact the other family or get your own SimchaPro account.</p>
@@ -614,7 +649,7 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Invite Side B Panel */}
+        {/* Invite Side B Panel — always manageable by Side A, even with expired edit access */}
         {!isSideB && <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-blue-900">👨‍👩‍👧 Other Family Access</h3>
@@ -662,9 +697,9 @@ export default function ExpenseTracker() {
 
         <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={() => setTab('my')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'my' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>My Expenses</button>
-          {!(isSideB && isRevoked) && <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>}
-          {!(isSideB && isRevoked) && <button onClick={async () => { setTab('checks'); await loadAllPayments(vendors) }} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'checks' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📋 Check Tracker</button>}
-          {!(isSideB && isRevoked) && <button onClick={() => setTab('breakdown')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'breakdown' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📊 Breakdown</button>}
+          {!isRevoked && <button onClick={() => setTab('shared')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'shared' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>Shared Expenses</button>}
+          {!isRevoked && <button onClick={async () => { setTab('checks'); await loadAllPayments(vendors) }} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'checks' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📋 Check Tracker</button>}
+          {!isRevoked && <button onClick={() => setTab('breakdown')} className={`px-6 py-2 rounded-full text-sm font-semibold border transition-all ${tab === 'breakdown' ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-blue-900 border-blue-900 hover:bg-blue-50'}`}>📊 Breakdown</button>}
         </div>
 
         {tab === 'checks' && (
@@ -790,11 +825,10 @@ export default function ExpenseTracker() {
                   <option value="category">Sort: Category</option>
                   <option value="occasion">Sort: For</option>
                 </select>
-                {!(isSideB && isRevoked) && <button onClick={() => setShowAddVendor(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Add Vendor</button>}
+                {!isRevoked && canEdit && <button onClick={() => setShowAddVendor(true)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">+ Add Vendor</button>}
               </div>
             </div>
 
-            {/* FIX #4: Mobile modal — scrollable from top so Vendor Name is always reachable */}
             {showAddVendor && (
               <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
                 <div className="flex items-start justify-center min-h-full py-4 px-2">
@@ -942,7 +976,6 @@ export default function ExpenseTracker() {
 
                     {isExpanded && (
                       <div className="border-t px-6 py-4 space-y-5">
-                        {/* FIX #1, #2, #3: Edit form now includes Expense Type, Category, and For */}
                         {/* Entered by tag */}
                         {vendor.is_shared && (
                           <p className="text-xs text-gray-400 mb-1">
@@ -1004,11 +1037,11 @@ export default function ExpenseTracker() {
                             </div>
                           </div>
                         ) : (
-                          (!isSideB || vendor.entered_by_user_id === user.id) ? (
+                          canEdit && (!isSideB || vendor.entered_by_user_id === user.id) ? (
                             <button onClick={e => { e.stopPropagation(); setEditingVendor({ ...vendor }) }} className="text-blue-600 text-xs hover:underline">✏️ Edit vendor info</button>
-                          ) : (
+                          ) : isSideB && vendor.entered_by_user_id !== user.id ? (
                             <p className="text-xs text-gray-400">✏️ Entered by the other family</p>
-                          )
+                          ) : null
                         )}
 
                         {vendor.is_shared && (
@@ -1042,18 +1075,22 @@ export default function ExpenseTracker() {
                               ) : (
                                 <div className="flex items-start justify-between gap-2">
                                   <p className="text-sm text-gray-700 flex-1">📝 {n.comment}</p>
-                                  <div className="flex gap-2 shrink-0">
-                                    <button onClick={() => setEditingNote({ ...n })} className="text-blue-500 text-xs hover:underline">✏️</button>
-                                    <button onClick={() => deleteNote(n.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
-                                  </div>
+                                  {canEdit && (
+                                    <div className="flex gap-2 shrink-0">
+                                      <button onClick={() => setEditingNote({ ...n })} className="text-blue-500 text-xs hover:underline">✏️</button>
+                                      <button onClick={() => deleteNote(n.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
                           ))}
-                          <div className="flex gap-2 mt-2">
-                            <input placeholder="Add a note..." value={newNote[vendor.id] || ''} onChange={e => setNewNote(p => ({ ...p, [vendor.id]: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <button onClick={() => addNote(vendor.id)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">Add</button>
-                          </div>
+                          {canEdit && (
+                            <div className="flex gap-2 mt-2">
+                              <input placeholder="Add a note..." value={newNote[vendor.id] || ''} onChange={e => setNewNote(p => ({ ...p, [vendor.id]: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <button onClick={() => addNote(vendor.id)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800">Add</button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Payments Section */}
@@ -1093,8 +1130,12 @@ export default function ExpenseTracker() {
                                     {p.is_check && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Check{p.check_date ? ` (${new Date(p.check_date + 'T00:00:00').toLocaleDateString('en-US')})` : ''}</span>}
                                     {p.paid_by && <span className="text-xs text-gray-400">by {p.paid_by}</span>}
                                     {p.payment_method && <span className="text-xs text-gray-400">· {p.payment_method}</span>}
-                                    <button onClick={() => setEditingPayment({ ...p })} className="text-blue-500 text-xs hover:underline">✏️</button>
-                                    <button onClick={() => deletePayment(p.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
+                                    {canEdit && (
+                                      <>
+                                        <button onClick={() => setEditingPayment({ ...p })} className="text-blue-500 text-xs hover:underline">✏️</button>
+                                        <button onClick={() => deletePayment(p.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
+                                      </>
+                                    )}
                                   </div>
                                   <div className="text-right text-xs">
                                     {p.due_date && <p className="text-gray-400">Due: {new Date(p.due_date + 'T00:00:00').toLocaleDateString('en-US')}</p>}
@@ -1104,37 +1145,39 @@ export default function ExpenseTracker() {
                               )}
                             </div>
                           ))}
-                          <div className="mt-3 bg-gray-50 rounded-lg p-4 space-y-3">
-                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add Payment</p>
-                            <div className="grid grid-cols-2 gap-2">
-                              <input placeholder="Amount *" type="number" value={newPayment[vendor.id]?.amount || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], amount: e.target.value } }))} className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                              <select value={newPayment[vendor.id]?.paid_by || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], paid_by: e.target.value } }))} className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="">Who Paid? *</option>
-                                <option>{chossonName}</option>
-                                <option>{kallaName}</option>
-                              </select>
-                              <select value={newPayment[vendor.id]?.payment_method || 'Cash'} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], payment_method: e.target.value } }))} className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
-                              </select>
+                          {canEdit && (
+                            <div className="mt-3 bg-gray-50 rounded-lg p-4 space-y-3">
+                              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Add Payment</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <input placeholder="Amount *" type="number" value={newPayment[vendor.id]?.amount || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], amount: e.target.value } }))} className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                <select value={newPayment[vendor.id]?.paid_by || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], paid_by: e.target.value } }))} className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                  <option value="">Who Paid? *</option>
+                                  <option>{chossonName}</option>
+                                  <option>{kallaName}</option>
+                                </select>
+                                <select value={newPayment[vendor.id]?.payment_method || 'Cash'} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], payment_method: e.target.value } }))} className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                  {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">Due date (optional)</label>
+                                  <input type="date" value={newPayment[vendor.id]?.due_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], due_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">Date paid (optional)</label>
+                                  <input type="date" value={newPayment[vendor.id]?.paid_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], paid_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
+                              </div>
+                              {newPayment[vendor.id]?.payment_method === 'Check' && (
+                                <div>
+                                  <label className="text-xs text-gray-500 block mb-1">Check date</label>
+                                  <input type="date" value={newPayment[vendor.id]?.check_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], check_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                </div>
+                              )}
+                              <button onClick={() => addPayment(vendor)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800 w-full">Add Payment</button>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-xs text-gray-500 block mb-1">Due date (optional)</label>
-                                <input type="date" value={newPayment[vendor.id]?.due_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], due_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-500 block mb-1">Date paid (optional)</label>
-                                <input type="date" value={newPayment[vendor.id]?.paid_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], paid_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                              </div>
-                            </div>
-                            {newPayment[vendor.id]?.payment_method === 'Check' && (
-                              <div>
-                                <label className="text-xs text-gray-500 block mb-1">Check date</label>
-                                <input type="date" value={newPayment[vendor.id]?.check_date || ''} onChange={e => setNewPayment(p => ({ ...p, [vendor.id]: { ...p[vendor.id], check_date: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                              </div>
-                            )}
-                            <button onClick={() => addPayment(vendor)} className="bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800 w-full">Add Payment</button>
-                          </div>
+                          )}
                         </div>
 
                         {/* Additional Charges */}
@@ -1150,19 +1193,23 @@ export default function ExpenseTracker() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-green-600 text-xs font-semibold">✓ Recorded</span>
-                                <button onClick={() => deletePayment(p.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
+                                {canEdit && (
+                                  <button onClick={() => deletePayment(p.id, vendor.id)} className="text-red-400 text-xs hover:text-red-600">🗑️</button>
+                                )}
                               </div>
                             </div>
                           ))}
-                          <div className="mt-3 bg-purple-50 rounded-lg p-4 space-y-3">
-                            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Add Additional Charge</p>
-                            <input placeholder="Description * (e.g. Extra hour overtime)" value={newAddon[vendor.id]?.description || ''} onChange={e => setNewAddon(p => ({ ...p, [vendor.id]: { ...p[vendor.id], description: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                            <input placeholder="Amount *" type="number" value={newAddon[vendor.id]?.amount || ''} onChange={e => setNewAddon(p => ({ ...p, [vendor.id]: { ...p[vendor.id], amount: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                            <button onClick={() => addAddon(vendor)} className="bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-800 w-full">Add Charge</button>
-                          </div>
+                          {canEdit && (
+                            <div className="mt-3 bg-purple-50 rounded-lg p-4 space-y-3">
+                              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Add Additional Charge</p>
+                              <input placeholder="Description * (e.g. Extra hour overtime)" value={newAddon[vendor.id]?.description || ''} onChange={e => setNewAddon(p => ({ ...p, [vendor.id]: { ...p[vendor.id], description: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                              <input placeholder="Amount *" type="number" value={newAddon[vendor.id]?.amount || ''} onChange={e => setNewAddon(p => ({ ...p, [vendor.id]: { ...p[vendor.id], amount: e.target.value } }))} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                              <button onClick={() => addAddon(vendor)} className="bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-800 w-full">Add Charge</button>
+                            </div>
+                          )}
                         </div>
 
-                        {(!isSideB || vendor.entered_by_user_id === user.id) && (
+                        {canEdit && (!isSideB || vendor.entered_by_user_id === user.id) && (
                           <button onClick={() => deleteVendor(vendor.id)} className="text-red-400 hover:text-red-600 text-xs">Delete vendor</button>
                         )}
                       </div>
