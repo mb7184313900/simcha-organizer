@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import { getAccessStatus } from '../../lib/accessControl'
 
 const CHECKLISTS = {
   'Lchaim': [
@@ -346,7 +347,7 @@ const CHECKLISTS = {
     { section: "Chosson's Side", text: 'Extra Set of Clothing for Chosson' },
     { section: "Chosson's Side", text: "Chosson's Tefillin (if not yet by apartment)" },
   ],
- 'Vochen Sheva Brachos': [
+  'Vochen Sheva Brachos': [
     'Tables / Chairs / Tablecloths',
     'Dishes / Flatware / Cups / Napkins',
     'Waiters',
@@ -477,7 +478,7 @@ const CHECKLISTS = {
     { section: 'Separate Milchig & Fleishig', text: 'Cutting Boards' },
     { section: 'Separate Milchig & Fleishig', text: 'Salt & Pepper Shakers' },
   ],
- 'Grocery': [
+  'Grocery': [
     { section: 'Food & Pantry', text: 'Farina / Oatmeal' },
     { section: 'Food & Pantry', text: 'Tuna' },
     { section: 'Food & Pantry', text: 'Mayonnaise' },
@@ -580,65 +581,44 @@ const CHECKLIST_LABELS = {
 
 export default function ChecklistPage() {
   const [user, setUser] = useState(null)
-  const [isPaid, setIsPaid] = useState(false)
+  const [access, setAccess] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeList, setActiveList] = useState('Lchaim')
   const [items, setItems] = useState({})
   const [newItemText, setNewItemText] = useState('')
   const [dateInputs, setDateInputs] = useState({})
   const [showRemoved, setShowRemoved] = useState(false)
-const [showHowItWorks, setShowHowItWorks] = useState(false)
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
   const router = useRouter()
+
+  const canEdit = access?.canEdit || false
+  const hasDataAccess = access?.hasDataAccess || false
 
   useEffect(() => {
     const init = async () => {
-  const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    // Not logged in — show free view-only version
-    const initial = {}
-    Object.keys(CHECKLISTS).forEach(k => {
-      initial[k] = CHECKLISTS[k].map(entry => {
-        const text = typeof entry === 'string' ? entry : entry.text
-        const section = typeof entry === 'string' ? null : entry.section
-        return { text, section, checked: false, removed: false, date: null, isCustom: false }
-      })
-    })
-    setItems(initial)
-    setLoading(false)
-    return
-  }
-
-      setUser(user)
-
-      // Check if Side B (accepted an invite)
-      const { data: invite } = await supabase
-        .from('wedding_invites')
-        .select('*')
-        .eq('accepted_by_user_id', user.id)
-        .eq('status', 'accepted')
-        .maybeSingle()
-
-      if (invite) {
-        setIsPaid(true)
-        await loadUserData(user.id)
+      if (!user) {
+        // Not logged in — show free view-only version
+        const initial = {}
+        Object.keys(CHECKLISTS).forEach(k => {
+          initial[k] = CHECKLISTS[k].map(entry => {
+            const text = typeof entry === 'string' ? entry : entry.text
+            const section = typeof entry === 'string' ? null : entry.section
+            return { text, section, checked: false, removed: false, date: null, isCustom: false }
+          })
+        })
+        setItems(initial)
         setLoading(false)
         return
       }
 
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('email', user.email)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+      setUser(user)
 
-      const now = new Date()
-      const hasAccess = sub && new Date(sub.expires_at) > now
-      setIsPaid(!!hasAccess)
+      const status = await getAccessStatus(user)
+      setAccess(status)
 
-      if (hasAccess) {
+      if (status.hasDataAccess) {
         await loadUserData(user.id)
       } else {
         const initial = {}
@@ -719,7 +699,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   }
 
   const toggleCheck = async (listKey, itemText) => {
-    if (!isPaid) return
+    if (!canEdit) return
     setItems(prev => {
       const updated = prev[listKey].map(i =>
         i.text === itemText ? { ...i, checked: !i.checked } : i
@@ -731,7 +711,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   }
 
   const removeItem = async (listKey, itemText) => {
-    if (!isPaid) return
+    if (!canEdit) return
     setItems(prev => {
       const updated = prev[listKey].map(i =>
         i.text === itemText ? { ...i, removed: true } : i
@@ -742,7 +722,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   }
 
   const addBackItem = async (listKey, itemText) => {
-    if (!isPaid) return
+    if (!canEdit) return
     setItems(prev => {
       const updated = prev[listKey].map(i =>
         i.text === itemText ? { ...i, removed: false } : i
@@ -752,7 +732,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
     await saveItem(listKey, itemText, { removed: false })
   }
   const removeSection = async (listKey, sectionNames) => {
-    if (!isPaid) return
+    if (!canEdit) return
     const itemsToRemove = (items[listKey] || []).filter(i => sectionNames.includes(i.section) && !i.removed)
     setItems(prev => {
       const updated = prev[listKey].map(i =>
@@ -766,7 +746,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   }
 
   const addBackSection = async (listKey, sectionNames) => {
-    if (!isPaid) return
+    if (!canEdit) return
     const itemsToRestore = (items[listKey] || []).filter(i => sectionNames.includes(i.section) && i.removed)
     setItems(prev => {
       const updated = prev[listKey].map(i =>
@@ -780,7 +760,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   }
 
   const addCustomItem = async () => {
-    if (!isPaid || !newItemText.trim()) return
+    if (!canEdit || !newItemText.trim()) return
     const text = newItemText.trim()
     setItems(prev => ({
       ...prev,
@@ -799,7 +779,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   }
 
   const setItemDate = async (listKey, itemText, date) => {
-    if (!isPaid) return
+    if (!canEdit) return
     setItems(prev => {
       const updated = prev[listKey].map(i =>
         i.text === itemText ? { ...i, date } : i
@@ -889,8 +869,8 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
     </div>
   </div>
 )}
-        {/* Upgrade Banner */}
-        {!isPaid && (
+        {/* Upgrade Banner — no account / trial expired without ever paying */}
+        {!hasDataAccess && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="font-semibold text-yellow-800">You're viewing a preview</p>
@@ -899,6 +879,33 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
             <a href="/signup" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
               Start Free Trial
             </a>
+          </div>
+        )}
+
+        {/* Read-only banner — edit access expired (1-year window passed) */}
+        {access?.state === 'expired' && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-yellow-800">⏰ {access.isSideB ? 'Edit access has expired' : 'Your edit access has expired'}</p>
+              <p className="text-yellow-700 text-sm">
+                {access.isSideB
+                  ? "You're viewing this checklist in read-only mode. Ask the wedding owner to renew to make changes again."
+                  : "You're viewing this checklist in read-only mode. Renew to check off items, add tasks, and more."}
+              </p>
+            </div>
+            {!access.isSideB && (
+              <a href="/renew" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
+                Renew Now
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Read-only banner — Side B revoked directly by Side A */}
+        {access?.state === 'revoked' && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-8">
+            <p className="font-semibold text-red-700">⚠️ Your shared access has been revoked</p>
+            <p className="text-red-600 text-sm">The other family has revoked your shared access. You can still view your own checklist below, but cannot add or edit anything.</p>
           </div>
         )}
 
@@ -929,7 +936,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden mb-4">
           <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
   <h3 className="font-bold text-blue-900 text-lg">{CHECKLIST_LABELS[activeList]}</h3>
-  {isPaid && (
+  {hasDataAccess && (
     <div className="flex items-center gap-2">
       <button onClick={() => setShowHowItWorks(true)} className="text-xs text-gray-500 border border-gray-200 px-3 py-1 rounded-full hover:bg-gray-100 font-semibold">
         How it works
@@ -942,7 +949,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
 </div>
 
           {/* Items with dates */}
-          {isPaid && withDate.length > 0 && (
+          {hasDataAccess && withDate.length > 0 && (
             <div className="divide-y border-b">
               {withDate.map(item => {
                 const days = getDaysUntil(item.date)
@@ -950,7 +957,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                   <ItemRow
                     key={item.text}
                     item={item}
-                    isPaid={isPaid}
+                    canEdit={canEdit}
                     days={days}
                     onToggle={() => toggleCheck(activeList, item.text)}
                     onRemove={() => removeItem(activeList, item.text)}
@@ -987,7 +994,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                    {showHeader && (
                       <div className="px-6 pt-4 pb-1 bg-gray-50 flex justify-between items-center">
                         <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">{item.section}</span>
-                          {item.section === "Kallah's Side" || item.section === "Chosson's Side" ? (
+                          {canEdit && (item.section === "Kallah's Side" || item.section === "Chosson's Side" ? (
                           <button
                             onClick={() => {
                               const sections = (item.section === "Chosson's Side" && activeList === 'Lchaim')
@@ -1023,12 +1030,12 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
                           >
                             Remove entire Kallah's Side
                           </button>
-                        ) : null}
+                        ) : null)}
                       </div>
                     )}
                     <ItemRow
                       item={item}
-                      isPaid={isPaid}
+                      canEdit={canEdit}
                       days={null}
                       onToggle={() => toggleCheck(activeList, item.text)}
                       onRemove={() => removeItem(activeList, item.text)}
@@ -1043,13 +1050,13 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
           </div>
 
           {/* Checked items */}
-          {isPaid && checked.length > 0 && (
+          {hasDataAccess && checked.length > 0 && (
             <div className="divide-y border-t bg-gray-50">
               {checked.map(item => (
                 <ItemRow
                   key={item.text}
                   item={item}
-                  isPaid={isPaid}
+                  canEdit={canEdit}
                   days={null}
                   onToggle={() => toggleCheck(activeList, item.text)}
                   onRemove={() => removeItem(activeList, item.text)}
@@ -1062,7 +1069,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
           )}
 
           {/* Add custom item */}
-          {isPaid && (
+          {canEdit && (
             <div className="px-6 py-4 border-t flex gap-2">
               <input
                 type="text"
@@ -1083,7 +1090,7 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
         </div>
 
         {/* Removed items */}
-        {isPaid && removedList.length > 0 && (
+        {canEdit && removedList.length > 0 && (
           <div className="mt-2">
             <button
               onClick={() => setShowRemoved(v => !v)}
@@ -1175,17 +1182,17 @@ const [showHowItWorks, setShowHowItWorks] = useState(false)
   )
 }
 
-function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs, setDateInputs, highlight }) {
+function ItemRow({ item, canEdit, days, onToggle, onRemove, onSetDate, dateInputs, setDateInputs, highlight }) {
   const [showDatePicker, setShowDatePicker] = useState(false)
 
   return (
     <div className={`flex items-start gap-3 px-6 py-4 group ${highlight ? 'bg-blue-50' : ''} ${item.checked ? 'opacity-60' : ''}`}>
       <button
-        onClick={isPaid ? onToggle : undefined}
+        onClick={canEdit ? onToggle : undefined}
         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
           item.checked
             ? 'bg-blue-900 border-blue-900'
-            : isPaid
+            : canEdit
               ? 'border-gray-300 hover:border-blue-500 cursor-pointer'
               : 'border-gray-200 cursor-default'
         }`}
@@ -1199,26 +1206,28 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
           {item.isCustom && <span className="ml-2 text-xs text-blue-400 font-medium">custom</span>}
         </span>
 
-        {item.date && isPaid && (
+        {item.date && (
   <div className="mt-1 flex items-center gap-2">
     <span
-      onClick={() => setShowDatePicker(v => !v)}
-      className={`text-xs font-semibold px-2 py-0.5 rounded-full cursor-pointer hover:opacity-75 ${
+      onClick={() => canEdit && setShowDatePicker(v => !v)}
+      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${canEdit ? 'cursor-pointer hover:opacity-75' : ''} ${
         days === 0 ? 'bg-red-100 text-red-700' :
         days < 0 ? 'bg-gray-100 text-gray-500' :
         days <= 7 ? 'bg-orange-100 text-orange-700' :
         'bg-blue-100 text-blue-700'
       }`}
-      title="Click to edit date"
+      title={canEdit ? 'Click to edit date' : undefined}
     >
       {days === 0 ? 'Today!' : days < 0 ? `${Math.abs(days)}d ago` : `${days} day${days === 1 ? '' : 's'} away`}
     </span>
     <span className="text-xs text-gray-400">{item.date}</span>
-    <button onClick={() => onSetDate(null)} className="text-xs text-gray-300 hover:text-red-400">✕</button>
+    {canEdit && (
+      <button onClick={() => onSetDate(null)} className="text-xs text-gray-300 hover:text-red-400">✕</button>
+    )}
   </div>
 )}
 
-        {isPaid && showDatePicker && (
+        {canEdit && showDatePicker && (
           <div className="mt-2 flex items-center gap-2">
             <input
               type="date"
@@ -1237,7 +1246,7 @@ function ItemRow({ item, isPaid, days, onToggle, onRemove, onSetDate, dateInputs
         )}
       </div>
 
-      {isPaid && !item.checked && (
+      {canEdit && !item.checked && (
   <div className="flex items-center gap-2 flex-shrink-0">
     <button
       onClick={() => setShowDatePicker(v => !v)}
