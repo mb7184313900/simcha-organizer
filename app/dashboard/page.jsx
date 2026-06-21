@@ -81,7 +81,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {access.state === 'expired' && (
+        {access.state === 'expired' && !access.isSideB && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="font-semibold text-yellow-800">⏰ Your edit access has expired</p>
@@ -90,6 +90,13 @@ export default function Dashboard() {
             <a href="/renew" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
               Renew Now
             </a>
+          </div>
+        )}
+
+        {access.state === 'expired' && access.isSideB && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+            <p className="font-semibold text-yellow-800">⏰ Edit access has expired</p>
+            <p className="text-yellow-700 text-sm">You can still view all the data below. The wedding owner's edit access has expired — ask them to renew to add or edit again.</p>
           </div>
         )}
 
