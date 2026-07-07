@@ -1206,7 +1206,7 @@ function ItemRow({ item, canEdit, days, onToggle, onRemove, onSetDate, dateInput
           {item.isCustom && <span className="ml-2 text-xs text-blue-400 font-medium">custom</span>}
         </span>
 
-        {item.date && (
+        {item.date && !item.checked && (
   <div className="mt-1 flex items-center gap-2">
     <span
       onClick={() => canEdit && setShowDatePicker(v => !v)}
