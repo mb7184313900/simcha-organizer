@@ -1,18 +1,42 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getAccessStatus } from '../../lib/accessControl';
 import { useRouter } from 'next/navigation';
 
 export default function RenewPage() {
   const [loading, setLoading] = useState(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/');
+        return;
+      }
+
+      const status = await getAccessStatus(user);
+      if (status.isSideB) {
+        // Side B should never renew directly -- that would create a
+        // separate subscription under their own user_id instead of
+        // renewing the wedding owner's (Side A's) subscription.
+        router.push('/dashboard');
+        return;
+      }
+
+      setCheckingAccess(false);
+    };
+    checkAccess();
+  }, []);
 
   const handleCheckout = async (plan) => {
     setLoading(plan);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
@@ -24,6 +48,10 @@ export default function RenewPage() {
     const data = await res.json();
     if (data.url) window.location.href = data.url;
   };
+
+  if (checkingAccess) {
+    return <div className="min-h-screen flex items-center justify-center text-blue-900">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
