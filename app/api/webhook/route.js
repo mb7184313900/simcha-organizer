@@ -53,12 +53,32 @@ export async function POST(req) {
       );
     } else {
       console.error('No user_id found on checkout session metadata', session.id);
-      await supabase.from('subscriptions').insert({
-        email,
-        plan,
-        status: 'active',
-        expires_at: expires_at.toISOString(),
-      });
+
+      // Defensive fallback: look up an existing row by email before inserting,
+      // so we never create a duplicate row for someone who already has one
+      // (e.g. an existing trial row) without a user_id.
+      const { data: existingByEmail } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingByEmail) {
+        await supabase.from('subscriptions').update({
+          plan,
+          status: 'active',
+          expires_at: expires_at.toISOString(),
+        }).eq('id', existingByEmail.id);
+      } else {
+        await supabase.from('subscriptions').insert({
+          email,
+          plan,
+          status: 'active',
+          expires_at: expires_at.toISOString(),
+        });
+      }
     }
   }
 
