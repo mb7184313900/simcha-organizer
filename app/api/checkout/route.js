@@ -4,8 +4,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const PRICES = {
   one_time: { amount: 9900, mode: 'payment', name: 'Simcha Organizer - One Time' },
-  semi_annual: { amount: 2900, mode: 'subscription', name: 'Simcha Organizer - 6 Months' },
-  annual: { amount: 4900, mode: 'subscription', name: 'Simcha Organizer - Annual' },
+  semi_annual: { amount: 2900, mode: 'payment', name: 'Simcha Organizer - 6 Months' },
+  annual: { amount: 4900, mode: 'payment', name: 'Simcha Organizer - Annual' },
 };
 
 export async function POST(req) {
@@ -27,12 +27,6 @@ export async function POST(req) {
           currency: 'usd',
           product_data: { name: price.name },
           unit_amount: price.amount,
-          ...(price.mode === 'subscription' && {
-            recurring: {
-              interval: plan === 'annual' ? 'year' : 'month',
-              ...(plan === 'semi_annual' && { interval_count: 6 })
-            }
-          }),
         },
         quantity: 1,
       },
