@@ -15,14 +15,19 @@ export default function InvitePage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase
-        .from('wedding_invites')
-        .select('*')
-        .eq('invite_token', token)
-        .single()
-      if (data) {
-        setInvite(data)
-        setForm(f => ({ ...f, email: data.invited_email }))
+      try {
+        const res = await fetch('/api/invite/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inviteToken: token })
+        })
+        const result = await res.json()
+        if (result.invite) {
+          setInvite(result.invite)
+          setForm(f => ({ ...f, email: result.invite.invited_email }))
+        }
+      } catch (err) {
+        console.error('Failed to load invite:', err)
       }
       setLoading(false)
     }
@@ -52,7 +57,12 @@ export default function InvitePage() {
           setSubmitting(false)
           return
         }
-        userId = signUpData.user.id
+        userId = signUpData.user?.id || signUpData.session?.user?.id
+        if (!userId) {
+          setError('Account created! Please try signing in now.')
+          setSubmitting(false)
+          return
+        }
       } else {
         userId = signInData.user.id
       }
