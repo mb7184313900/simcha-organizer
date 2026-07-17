@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { sendPaymentReceipt, sendRenewalReceipt } from '../../../lib/email/sendReceipt';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabase = createClient(
@@ -79,6 +80,19 @@ export async function POST(req) {
           expires_at: expires_at.toISOString(),
         });
       }
+    }
+
+    // Send the appropriate confirmation email.
+    // 'one_time' = brand-new $99 purchase. 'annual'/'semi_annual' = a renewal.
+    try {
+      if (plan === 'one_time') {
+        await sendPaymentReceipt(email, expires_at.toISOString());
+      } else {
+        await sendRenewalReceipt(email, plan, expires_at.toISOString());
+      }
+    } catch (emailErr) {
+      // Never fail the webhook because of an email issue — payment already succeeded.
+      console.error('Failed to send receipt email', emailErr);
     }
   }
 

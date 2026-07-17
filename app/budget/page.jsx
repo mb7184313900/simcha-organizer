@@ -400,7 +400,8 @@ export default function ExpenseTracker() {
         paid_by: newVendor.payment_paid_by, payment_method: newVendor.payment_method || 'Cash',
         is_deposit: false, is_check: newVendor.payment_method === 'Check',
         check_date: newVendor.payment_method === 'Check' ? (newVendor.payment_check_date || null) : null,
-        is_paid: true, payment_type: paymentType, description: ''
+        is_paid: true, payment_type: paymentType, description: '',
+        created_by: user.id
       })
       finalStatus = getAutoStatus(totalAmount, newAmount)
       await supabase.from('vendors').update({ status: finalStatus }).eq('id', vendorId)
@@ -455,7 +456,8 @@ export default function ExpenseTracker() {
       paid_by: p.paid_by, payment_method: p.payment_method || 'Cash',
       is_deposit: false, is_check: p.payment_method === 'Check',
       check_date: p.payment_method === 'Check' ? (p.check_date || null) : null,
-      is_paid: true, payment_type: paymentType, description: ''
+      is_paid: true, payment_type: paymentType, description: '',
+      created_by: user.id
     }).select()
     const updatedPayments = [...(payments[vendor.id] || []), data[0]]
     setPayments(prev => ({ ...prev, [vendor.id]: updatedPayments }))
@@ -474,8 +476,9 @@ export default function ExpenseTracker() {
       payment_method: payment.payment_method, due_date: payment.due_date || null,
       paid_date: payment.paid_date || null, is_check: payment.payment_method === 'Check',
       check_date: payment.payment_method === 'Check' ? (payment.check_date || null) : null,
+      updated_at: new Date().toISOString(), last_edited_by: user.id
     }).eq('id', payment.id)
-    setPayments(prev => ({ ...prev, [payment.vendor_id]: prev[payment.vendor_id].map(p => p.id === payment.id ? { ...p, ...payment } : p) }))
+    setPayments(prev => ({ ...prev, [payment.vendor_id]: prev[payment.vendor_id].map(p => p.id === payment.id ? { ...p, ...payment, amount: parseFloat(payment.amount) } : p) }))
     setEditingPayment(null)
     showSuccess('Payment updated successfully!')
   }
@@ -494,7 +497,8 @@ export default function ExpenseTracker() {
       vendor_id: vendor.id, amount: parseFloat(a.amount),
       due_date: null, paid_date: null, paid_by: '', payment_method: 'Cash',
       is_deposit: false, is_check: false, check_date: null,
-      is_paid: true, payment_type: 'Add-on', description: a.description
+      is_paid: true, payment_type: 'Add-on', description: a.description,
+      created_by: user.id
     }).select()
     const updatedPayments = [...(payments[vendor.id] || []), data[0]]
     setPayments(prev => ({ ...prev, [vendor.id]: updatedPayments }))
