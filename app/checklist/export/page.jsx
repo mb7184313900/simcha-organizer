@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import { getAccessStatus } from '../../../lib/accessControl'
@@ -595,7 +595,7 @@ const CHECKLIST_PDF_TITLES = {
   'Grocery': 'Grocery Checklist',
 }
 
-export default function ExportPage() {
+function ExportPageContent() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [listKey, setListKey] = useState(null)
@@ -806,5 +806,13 @@ export default function ExportPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function ExportPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-blue-900">Loading...</div>}>
+      <ExportPageContent />
+    </Suspense>
   )
 }
