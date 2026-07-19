@@ -793,7 +793,7 @@ export default function ChecklistPage() {
     if (!dateStr) return null
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const target = new Date(dateStr)
+    const target = new Date(dateStr + 'T00:00:00')
     target.setHours(0, 0, 0, 0)
     return Math.ceil((target - today) / (1000 * 60 * 60 * 24))
   }
@@ -1220,7 +1220,7 @@ function ItemRow({ item, canEdit, days, onToggle, onRemove, onSetDate, dateInput
     >
       {days === 0 ? 'Today!' : days < 0 ? `${Math.abs(days)}d ago` : `${days} day${days === 1 ? '' : 's'} away`}
     </span>
-    <span className="text-xs text-gray-400">{item.date}</span>
+    <span className="text-xs text-gray-400">{new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}</span>
     {canEdit && (
       <button onClick={() => onSetDate(null)} className="text-xs text-gray-300 hover:text-red-400">✕</button>
     )}
