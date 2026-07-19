@@ -22,8 +22,9 @@ export default function ExpenseTracker() {
   const [editingVendor, setEditingVendor] = useState(null)
   const [editingPayment, setEditingPayment] = useState(null)
   const [familySettings, setFamilySettings] = useState(null)
+  const [weddingInfo, setWeddingInfo] = useState(null)
   const [showFamilySetup, setShowFamilySetup] = useState(false)
-  const [setupForm, setSetupForm] = useState({ my_side: 'chosson', my_family_name: '', other_family_name: '' })
+  const [setupForm, setSetupForm] = useState({ my_side: 'chosson', my_family_name: '', other_family_name: '', wedding_name: '', wedding_date: '' })
   const [payments, setPayments] = useState({})
   const [notes, setNotes] = useState({})
   const [newNote, setNewNote] = useState({})
@@ -60,6 +61,11 @@ export default function ExpenseTracker() {
     setTimeout(() => setSuccessMessage(''), 3000)
   }
 
+  const loadWeddingInfo = async (ownerId) => {
+    const { data } = await supabase.from('weddings').select('*').eq('side_a_user_id', ownerId).maybeSingle()
+    setWeddingInfo(data || null)
+  }
+
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -73,6 +79,9 @@ export default function ExpenseTracker() {
         router.push('/dashboard')
         return
       }
+
+      const weddingOwnerId = status.isSideB ? status.ownerUserId : user.id
+      await loadWeddingInfo(weddingOwnerId)
 
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).single()
       if (fs) {
@@ -98,9 +107,30 @@ export default function ExpenseTracker() {
 
   const saveFamilySettings = async () => {
     if (!setupForm.my_family_name || !setupForm.other_family_name) return
-    const { data } = await supabase.from('family_settings').insert({ user_id: user.id, ...setupForm }).select()
+    const { data } = await supabase.from('family_settings').insert({
+      user_id: user.id,
+      my_side: setupForm.my_side,
+      my_family_name: setupForm.my_family_name,
+      other_family_name: setupForm.other_family_name
+    }).select()
     setFamilySettings(data[0])
     setShowFamilySetup(false)
+
+    // Create the weddings row — Side A only. Side B gets linked in via the invite accept API instead.
+    if (!isSideB) {
+      const { data: existingWedding } = await supabase.from('weddings').select('id').eq('side_a_user_id', user.id).maybeSingle()
+      if (!existingWedding) {
+        await supabase.from('weddings').insert({
+          side_a_user_id: user.id,
+          chosson_family: setupForm.my_side === 'chosson' ? setupForm.my_family_name : setupForm.other_family_name,
+          kallah_family: setupForm.my_side === 'kallah' ? setupForm.my_family_name : setupForm.other_family_name,
+          wedding_name: setupForm.wedding_name || null,
+          wedding_date: setupForm.wedding_date || null
+        })
+      }
+      await loadWeddingInfo(user.id)
+    }
+
     await loadVendors(user.id)
   }
 
@@ -127,7 +157,6 @@ export default function ExpenseTracker() {
   const loadVendors = async (userId) => {
     const { data: myVendors } = await supabase.from('vendors').select('*').eq('user_id', userId)
 
-    // Also load shared vendors entered by Side B (if they accepted an invite from us)
     const { data: invite } = await supabase
       .from('wedding_invites')
       .select('*')
@@ -251,13 +280,10 @@ export default function ExpenseTracker() {
     loadInvite()
   }, [user])
 
-  // Note: Invite management (send/revoke/reinstate) is intentionally NOT gated by canEdit.
-  // Side A can always manage shared access for the other family, even after edit access has expired.
   const sendInvite = async () => {
     if (!inviteEmail) return
     setInviteStatus('sending')
 
-    // Delete any existing invite first so we start fresh
     await supabase.from('wedding_invites').delete().eq('owner_user_id', user.id)
 
     const res = await fetch('/api/invite/send', {
@@ -583,6 +609,14 @@ export default function ExpenseTracker() {
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Other Family's Name</label>
             <input placeholder="e.g. Sharon" value={setupForm.other_family_name} onChange={e => setSetupForm(p => ({ ...p, other_family_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">Wedding Name (optional)</label>
+            <input placeholder="e.g. Bloom-Sharon Wedding" value={setupForm.wedding_name} onChange={e => setSetupForm(p => ({ ...p, wedding_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-1 block">Wedding Date (optional)</label>
+            <input type="date" value={setupForm.wedding_date} onChange={e => setSetupForm(p => ({ ...p, wedding_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
           <button onClick={saveFamilySettings} className="w-full bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800">Get Started</button>
         </div>
       </div>
@@ -625,7 +659,6 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
-        {/* Read-only banner — edit access expired (1-year window passed) */}
         {access?.state === 'expired' && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -644,7 +677,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Revoked Side B banner */}
         {isRevoked && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
             <h3 className="font-bold text-red-700 mb-1">⚠️ Your access has been revoked</h3>
@@ -653,7 +685,6 @@ export default function ExpenseTracker() {
           </div>
         )}
 
-        {/* Invite Side B Panel — always manageable by Side A, even with expired edit access */}
         {!isSideB && <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-blue-900">👨‍👩‍👧 Other Family Access</h3>
@@ -980,7 +1011,6 @@ export default function ExpenseTracker() {
 
                     {isExpanded && (
                       <div className="border-t px-6 py-4 space-y-5">
-                        {/* Entered by tag */}
                         {vendor.is_shared && (
                           <p className="text-xs text-gray-400 mb-1">
                             Entered by: <span className="font-semibold text-blue-800">
@@ -1064,7 +1094,6 @@ export default function ExpenseTracker() {
                           </div>
                         )}
 
-                        {/* Notes Section */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Notes</p>
                           {vendorNotes.length === 0 && <p className="text-xs text-gray-400 mb-2">No notes yet.</p>}
@@ -1097,7 +1126,6 @@ export default function ExpenseTracker() {
                           )}
                         </div>
 
-                        {/* Payments Section */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Payments</p>
                           {regularPayments.length === 0 && <p className="text-xs text-gray-400 mb-2">No payments yet.</p>}
@@ -1184,7 +1212,6 @@ export default function ExpenseTracker() {
                           )}
                         </div>
 
-                        {/* Additional Charges */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Additional Charges {addonTotal > 0 && <span className="text-purple-600 font-normal text-xs ml-1">+${addonTotal.toLocaleString()} total</span>}</p>
                           {addons.length === 0 && <p className="text-xs text-gray-400 mb-2">No additional charges yet.</p>}

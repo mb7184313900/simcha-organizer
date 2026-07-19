@@ -76,6 +76,17 @@ export async function POST(req) {
       }
     }
 
+    // Link Side B into the weddings row (if one exists for this owner)
+    const { error: weddingLinkError } = await supabase
+      .from('weddings')
+      .update({ side_b_user_id: userId })
+      .eq('side_a_user_id', invite.owner_user_id)
+
+    if (weddingLinkError) {
+      console.error('Failed to link side_b_user_id on weddings row:', weddingLinkError.message)
+      // Not fatal — invite acceptance still succeeds even if this fails
+    }
+
     return Response.json({ success: true })
   } catch (err) {
     console.error('Accept invite error:', err)
