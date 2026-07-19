@@ -941,7 +941,7 @@ export default function ChecklistPage() {
       <button onClick={() => setShowHowItWorks(true)} className="text-xs text-gray-500 border border-gray-200 px-3 py-1 rounded-full hover:bg-gray-100 font-semibold">
         How it works
       </button>
-      <button onClick={() => router.push('/checklist/export')} className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold">
+      <button onClick={() => router.push(`/checklist/export?list=${encodeURIComponent(activeList)}`)} className="text-xs text-blue-700 border border-blue-300 px-3 py-1 rounded-full hover:bg-blue-100 font-semibold">
         Export ↓
       </button>
     </div>
