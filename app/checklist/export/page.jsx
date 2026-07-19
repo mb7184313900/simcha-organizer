@@ -654,6 +654,7 @@ function ExportPageContent() {
           section,
           checked: s ? s.checked : false,
           removed: s ? s.removed : false,
+          date: s ? s.item_date : null,
           isCustom: false,
         }
       })
@@ -663,6 +664,7 @@ function ExportPageContent() {
         section: null,
         checked: r.checked,
         removed: r.removed,
+        date: r.item_date,
         isCustom: true,
       }))
 
@@ -681,12 +683,17 @@ function ExportPageContent() {
       ? new Date(weddingInfo.wedding_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : ''
 
-    const renderItemRow = (item) => `
+    const renderItemRow = (item) => {
+      const dateDisplay = item.date
+        ? new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+        : ''
+      return `
       <div class="item-row ${item.checked ? 'item-checked' : ''}">
         <span class="item-box">${item.checked ? '✓' : ''}</span>
-        <span class="item-text">${item.text}${item.isCustom ? ' <span class="custom-tag">(custom)</span>' : ''}</span>
+        <span class="item-text">${item.text}${item.isCustom ? ' <span class="custom-tag">(custom)</span>' : ''}${dateDisplay ? ` <span class="item-date">— Due: ${dateDisplay}</span>` : ''}</span>
       </div>
     `
+    }
 
     const renderSectioned = (list) => {
       const groups = []
@@ -727,6 +734,7 @@ function ExportPageContent() {
           .item-checked .item-box { background: #1a3c8f; }
           .item-checked .item-text { color: #999; text-decoration: line-through; }
           .custom-tag { color: #4a7fd6; font-size: 11px; font-style: italic; }
+          .item-date { color: #1a3c8f; font-size: 11px; font-weight: 600; }
           .section-divider { margin-top: 20px; border-top: 2px solid #ddd; padding-top: 4px; }
           .print-btn { position: fixed; top: 20px; right: 20px; background: #1a3c8f; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
           @media print { .print-btn { display: none; } }
@@ -795,6 +803,7 @@ function ExportPageContent() {
                 <span className={`text-sm ${item.checked ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
                   {item.text}
                   {item.isCustom && <span className="ml-2 text-xs text-blue-400">custom</span>}
+                  {item.date && <span className="ml-2 text-xs text-blue-900 font-semibold">— Due: {new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>}
                 </span>
               </div>
             ))}
