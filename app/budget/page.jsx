@@ -157,6 +157,7 @@ export default function ExpenseTracker() {
   const loadVendors = async (userId) => {
     const { data: myVendors } = await supabase.from('vendors').select('*').eq('user_id', userId)
 
+    // Also load shared vendors entered by Side B (if they accepted an invite from us)
     const { data: invite } = await supabase
       .from('wedding_invites')
       .select('*')
@@ -280,10 +281,13 @@ export default function ExpenseTracker() {
     loadInvite()
   }, [user])
 
+  // Note: Invite management (send/revoke/reinstate) is intentionally NOT gated by canEdit.
+  // Side A can always manage shared access for the other family, even after edit access has expired.
   const sendInvite = async () => {
     if (!inviteEmail) return
     setInviteStatus('sending')
 
+    // Delete any existing invite first so we start fresh
     await supabase.from('wedding_invites').delete().eq('owner_user_id', user.id)
 
     const res = await fetch('/api/invite/send', {
@@ -334,15 +338,87 @@ export default function ExpenseTracker() {
   }
 
   const exportPDF = async (type) => {
-    await loadAllPayments(vendors)
-    const printWindow = window.open('', '_blank')
+    // Fetch fresh data directly from Supabase — guarantees accuracy even if a vendor
+    // was never expanded on screen (React state can otherwise be stale/incomplete).
+    const freshPayments = {}
+    const freshNotes = {}
+    for (const v of vendors) {
+      const { data: p } = await supabase.from('payments').select('*').eq('vendor_id', v.id)
+      freshPayments[v.id] = p || []
+      const { data: n } = await supabase.from('vendor_comments').select('*').eq('vendor_id', v.id).order('created_at', { ascending: true })
+      freshNotes[v.id] = n || []
+    }
+    setPayments(freshPayments)
+    setNotes(freshNotes)
+
     const isSharedOnly = type === 'shared'
+
+    const getFreshRegularPayments = (vendorId) => (freshPayments[vendorId] || []).filter(p => p.payment_type !== 'Add-on')
+    const getFreshAddons = (vendorId) => (freshPayments[vendorId] || []).filter(p => p.payment_type === 'Add-on')
+    const getFreshAddonTotal = (vendorId) => getFreshAddons(vendorId).reduce((s, p) => s + p.amount, 0)
+    const getFreshRevisedTotal = (vendor) => vendor.total_amount + getFreshAddonTotal(vendor.id)
+    const getFreshPaidBy = (vendorId, name) => getFreshRegularPayments(vendorId).filter(p => p.paid_by === name && p.is_paid).reduce((s, p) => s + p.amount, 0)
+    const getFreshTotalPaid = (vendorId) => getFreshRegularPayments(vendorId).filter(p => p.is_paid).reduce((s, p) => s + p.amount, 0)
+
+    // Recompute shared totals from the fresh data (component state may not have re-rendered yet)
+    const freshSharedTotal = allSharedVendors.reduce((s, v) => s + getFreshRevisedTotal(v), 0)
+    const freshChossonShare = allSharedVendors.reduce((s, v) => s + (getFreshRevisedTotal(v) * v.split_chosson / 100), 0)
+    const freshKallaShare = allSharedVendors.reduce((s, v) => s + (getFreshRevisedTotal(v) * v.split_kallah / 100), 0)
+    const freshPaidByChosson = allSharedVendors.reduce((sum, v) => sum + getFreshPaidBy(v.id, chossonName), 0)
+    const freshPaidByKalla = allSharedVendors.reduce((sum, v) => sum + getFreshPaidBy(v.id, kallaName), 0)
+    const freshChossonBalance = freshPaidByChosson - freshChossonShare
+    const freshKallaBalance = freshPaidByKalla - freshKallaShare
+
+    const weddingDateDisplay = weddingInfo?.wedding_date
+      ? new Date(weddingInfo.wedding_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : ''
+
+    const renderVendorBlock = (vendor, isShared) => {
+      const revisedTotal = getFreshRevisedTotal(vendor)
+      const vPayments = getFreshRegularPayments(vendor.id)
+      const vAddons = getFreshAddons(vendor.id)
+      const totalPaid = getFreshTotalPaid(vendor.id)
+      const balanceDue = Math.max(0, revisedTotal - totalPaid)
+      const vNotes = freshNotes[vendor.id] || []
+
+      let summaryLine
+      if (isShared) {
+        const chossonPaid = getFreshPaidBy(vendor.id, chossonName)
+        const kallaPaid = getFreshPaidBy(vendor.id, kallaName)
+        summaryLine = `${chossonName} Paid: $${chossonPaid.toLocaleString()} &nbsp;|&nbsp; ${kallaName} Paid: $${kallaPaid.toLocaleString()} &nbsp;|&nbsp; Balance Due: $${balanceDue.toLocaleString()}`
+      } else {
+        summaryLine = `Total Paid: $${totalPaid.toLocaleString()} &nbsp;|&nbsp; Balance Due: $${balanceDue.toLocaleString()}`
+      }
+
+      return `
+        <div class="${isShared ? 'vendor-header' : 'private-vendor-header'}">
+          ${vendor.name} | ${vendor.category} | For: ${vendor.occasion || 'General'} | Total: $${revisedTotal.toLocaleString()}
+        </div>
+        <div class="vendor-summary-line">${summaryLine}</div>
+        <table><tr><th>Type</th><th>Amount</th><th>Paid By</th><th>Method</th><th>Date</th></tr>
+        ${vPayments.length > 0 ? vPayments.map(p => `<tr><td>${p.payment_type||''}</td><td>$${p.amount.toLocaleString()}</td><td>${p.paid_by||''}</td><td>${p.payment_method||''}</td><td>${p.paid_date||p.due_date||''}</td></tr>`).join('') : '<tr><td colspan="5" style="color:#999">No payments recorded</td></tr>'}
+        ${vAddons.map(p => `<tr><td>Add-on</td><td>$${p.amount.toLocaleString()}</td><td colspan="3">${p.description||''}</td></tr>`).join('')}
+        </table>
+        ${vNotes.length > 0 ? `<div class="notes-box"><strong>Notes:</strong><ul>${vNotes.map(n => `<li>${n.comment}</li>`).join('')}</ul></div>` : ''}
+      `
+    }
+
+    const reportVendors = isSharedOnly ? allSharedVendors : vendors
+    const grandTotalBudget = reportVendors.reduce((s, v) => s + getFreshRevisedTotal(v), 0)
+    const grandTotalPaid = reportVendors.reduce((s, v) => s + getFreshTotalPaid(v.id), 0)
+    const grandTotalRemaining = Math.max(0, grandTotalBudget - grandTotalPaid)
+
+    const printWindow = window.open('', '_blank')
     const html = `
       <html><head>
         <title>SimchaPro ${isSharedOnly ? 'Shared Expense Report' : 'Full Expense Report'}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
-          h1 { color: #1a3c8f; text-align: center; margin-bottom: 5px; }
+        @page { size: portrait; margin: 0.5in; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; }
+          .logo-bar { text-align: center; padding: 20px 0 10px; border-bottom: 3px solid #1a3c8f; margin-bottom: 10px; }
+          .logo-text { font-size: 32px; font-weight: 800; color: #1a3c8f; letter-spacing: -0.5px; }
+          .logo-tagline { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+          h1 { color: #1a3c8f; text-align: center; margin: 15px 0 5px; font-size: 22px; }
           h2 { color: #1a3c8f; margin-top: 30px; border-bottom: 2px solid #1a3c8f; padding-bottom: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
           th { background: #1a3c8f; color: white; padding: 8px; text-align: left; }
@@ -352,14 +428,30 @@ export default function ExpenseTracker() {
           .settled { font-size: 15px; font-weight: bold; color: green; margin: 10px 0 0; }
           .vendor-header { background: #e8edf8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
           .private-vendor-header { background: #e8f5e8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+          .vendor-summary-line { font-size: 12px; color: #444; padding: 6px 12px; background: #fafafa; border-left: 3px solid #1a3c8f; margin-top: 4px; }
+          .notes-box { background: #fffbea; border-left: 3px solid #e0b400; padding: 8px 12px; margin-top: 6px; font-size: 12px; }
+          .notes-box ul { margin: 4px 0 0 18px; padding: 0; }
           .subtitle { text-align: center; color: #666; margin: 3px 0; }
+          .wedding-name { text-align: center; font-size: 18px; font-weight: bold; color: #1a3c8f; margin: 8px 0 0; }
+          .wedding-date { text-align: center; font-size: 13px; color: #888; margin: 2px 0 10px; }
           .notice { background: #fff3cd; padding: 8px 15px; border-radius: 6px; text-align: center; font-size: 12px; color: #856404; margin: 10px 0; }
           .print-btn { position: fixed; top: 20px; right: 20px; background: #1a3c8f; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+          .grand-summary { background: #1a3c8f; color: white; padding: 20px; border-radius: 10px; margin-top: 40px; }
+          .grand-summary h2 { color: white; border-bottom: 2px solid rgba(255,255,255,0.4); margin-top: 0; }
+          .grand-summary table { font-size: 14px; }
+          .grand-summary th { background: rgba(255,255,255,0.15); }
+          .grand-summary td { border-bottom: 1px solid rgba(255,255,255,0.2); color: white; }
           @media print { .print-btn { display: none; } }
         </style>
       </head><body>
         <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-        <h1>SimchaPro — ${isSharedOnly ? 'Shared Expense Report' : 'Full Expense Report'}</h1>
+        <div class="logo-bar">
+          <div class="logo-text">SimchaPro</div>
+          <div class="logo-tagline">Simcha Planning Made Simple</div>
+        </div>
+        <h1>${isSharedOnly ? 'Shared Expense Report' : 'Full Expense Report'}</h1>
+        ${weddingInfo?.wedding_name ? `<p class="wedding-name">${weddingInfo.wedding_name}</p>` : ''}
+        ${weddingDateDisplay ? `<p class="wedding-date">📅 ${weddingDateDisplay}</p>` : ''}
         <p class="subtitle">${chossonName} & ${kallaName}</p>
         <p class="subtitle">Generated: ${new Date().toLocaleDateString()}</p>
         ${isSharedOnly ? '<p class="notice">This report contains shared expenses only</p>' : '<p class="notice">Confidential — For personal use only</p>'}
@@ -367,29 +459,22 @@ export default function ExpenseTracker() {
         <div class="summary-box">
           <table>
             <tr><th></th><th>${chossonName}</th><th>${kallaName}</th><th>Total</th></tr>
-            <tr><td>Share</td><td>$${chossonShare.toLocaleString()}</td><td>$${kallaShare.toLocaleString()}</td><td>$${sharedTotal.toLocaleString()}</td></tr>
-            <tr><td>Paid</td><td>$${paidByChosson.toLocaleString()}</td><td>$${paidByKalla.toLocaleString()}</td><td>$${(paidByChosson + paidByKalla).toLocaleString()}</td></tr>
+            <tr><td>Share</td><td>$${freshChossonShare.toLocaleString()}</td><td>$${freshKallaShare.toLocaleString()}</td><td>$${freshSharedTotal.toLocaleString()}</td></tr>
+            <tr><td>Paid</td><td>$${freshPaidByChosson.toLocaleString()}</td><td>$${freshPaidByKalla.toLocaleString()}</td><td>$${(freshPaidByChosson + freshPaidByKalla).toLocaleString()}</td></tr>
           </table>
-          <p class="${chossonBalance > 0 || kallaBalance > 0 ? 'balance' : 'settled'}">${chossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(chossonBalance).toLocaleString()}` : kallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(kallaBalance).toLocaleString()}` : 'All settled between families'}</p>
+          <p class="${freshChossonBalance > 0 || freshKallaBalance > 0 ? 'balance' : 'settled'}">${freshChossonBalance > 0 ? `${kallaName} owes ${chossonName} $${Math.abs(freshChossonBalance).toLocaleString()}` : freshKallaBalance > 0 ? `${chossonName} owes ${kallaName} $${Math.abs(freshKallaBalance).toLocaleString()}` : 'All settled between families'}</p>
         </div>
         <h2>Shared Expenses — Detail</h2>
-        ${allSharedVendors.map(vendor => {
-          const revisedTotal = getVendorRevisedTotal(vendor)
-          const vPayments = payments[vendor.id] || []
-          return `<div class="vendor-header">${vendor.name} | ${vendor.category} | For: ${vendor.occasion || 'General'} | Total: $${revisedTotal.toLocaleString()}</div>
-            <table><tr><th>Type</th><th>Amount</th><th>Paid By</th><th>Method</th><th>Date</th></tr>
-            ${vPayments.length > 0 ? vPayments.map(p => `<tr><td>${p.payment_type||''}</td><td>$${p.amount.toLocaleString()}</td><td>${p.paid_by||''}</td><td>${p.payment_method||''}</td><td>${p.paid_date||p.due_date||''}</td></tr>`).join('') : '<tr><td colspan="5" style="color:#999">No payments recorded</td></tr>'}
-            </table>`
-        }).join('')}
+        ${allSharedVendors.map(vendor => renderVendorBlock(vendor, true)).join('')}
         ${!isSharedOnly && allMyVendors.length > 0 ? `<h2>${myFamilyName} — Private Expenses</h2>
-        ${allMyVendors.map(vendor => {
-          const revisedTotal = getVendorRevisedTotal(vendor)
-          const vPayments = payments[vendor.id] || []
-          return `<div class="private-vendor-header">${vendor.name} | ${vendor.category} | For: ${vendor.occasion || 'General'} | Total: $${revisedTotal.toLocaleString()}</div>
-            <table><tr><th>Type</th><th>Amount</th><th>Paid By</th><th>Method</th><th>Date</th></tr>
-            ${vPayments.length > 0 ? vPayments.map(p => `<tr><td>${p.payment_type||''}</td><td>$${p.amount.toLocaleString()}</td><td>${p.paid_by||''}</td><td>${p.payment_method||''}</td><td>${p.paid_date||p.due_date||''}</td></tr>`).join('') : '<tr><td colspan="5" style="color:#999">No payments recorded</td></tr>'}
-            </table>`
-        }).join('')}` : ''}
+        ${allMyVendors.map(vendor => renderVendorBlock(vendor, false)).join('')}` : ''}
+        <div class="grand-summary">
+          <h2>Grand Summary</h2>
+          <table>
+            <tr><th>Total Budget</th><th>Total Paid</th><th>Total Remaining</th></tr>
+            <tr><td>$${grandTotalBudget.toLocaleString()}</td><td>$${grandTotalPaid.toLocaleString()}</td><td>$${grandTotalRemaining.toLocaleString()}</td></tr>
+          </table>
+        </div>
       </body></html>`
     printWindow.document.write(html)
     printWindow.document.close()
@@ -659,6 +744,7 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
+        {/* Read-only banner — edit access expired (1-year window passed) */}
         {access?.state === 'expired' && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -677,6 +763,7 @@ export default function ExpenseTracker() {
           </div>
         )}
 
+        {/* Revoked Side B banner */}
         {isRevoked && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
             <h3 className="font-bold text-red-700 mb-1">⚠️ Your access has been revoked</h3>
@@ -685,6 +772,7 @@ export default function ExpenseTracker() {
           </div>
         )}
 
+        {/* Invite Side B Panel — always manageable by Side A, even with expired edit access */}
         {!isSideB && <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-blue-900">👨‍👩‍👧 Other Family Access</h3>
@@ -1011,6 +1099,7 @@ export default function ExpenseTracker() {
 
                     {isExpanded && (
                       <div className="border-t px-6 py-4 space-y-5">
+                        {/* Entered by tag */}
                         {vendor.is_shared && (
                           <p className="text-xs text-gray-400 mb-1">
                             Entered by: <span className="font-semibold text-blue-800">
@@ -1094,6 +1183,7 @@ export default function ExpenseTracker() {
                           </div>
                         )}
 
+                        {/* Notes Section */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Notes</p>
                           {vendorNotes.length === 0 && <p className="text-xs text-gray-400 mb-2">No notes yet.</p>}
@@ -1126,6 +1216,7 @@ export default function ExpenseTracker() {
                           )}
                         </div>
 
+                        {/* Payments Section */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Payments</p>
                           {regularPayments.length === 0 && <p className="text-xs text-gray-400 mb-2">No payments yet.</p>}
@@ -1212,6 +1303,7 @@ export default function ExpenseTracker() {
                           )}
                         </div>
 
+                        {/* Additional Charges */}
                         <div>
                           <p className="text-sm font-bold text-blue-900 mb-2">Additional Charges {addonTotal > 0 && <span className="text-purple-600 font-normal text-xs ml-1">+${addonTotal.toLocaleString()} total</span>}</p>
                           {addons.length === 0 && <p className="text-xs text-gray-400 mb-2">No additional charges yet.</p>}
