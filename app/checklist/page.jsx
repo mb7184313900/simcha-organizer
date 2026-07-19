@@ -933,7 +933,7 @@ export default function ChecklistPage() {
         )}
 
         {/* Active Checklist */}
-        <div className="bg-white rounded-2xl border shadow-sm overflow-hidden mb-4">
+        <div key={activeList} className="bg-white rounded-2xl border shadow-sm overflow-hidden mb-4">
           <div className="px-6 py-4 border-b flex justify-between items-center bg-blue-50">
   <h3 className="font-bold text-blue-900 text-lg">{CHECKLIST_LABELS[activeList]}</h3>
   {hasDataAccess && (
