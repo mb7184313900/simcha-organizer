@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
+import Image from 'next/image'
+import Footer from '../../../components/Footer'
 
 export default function InvitePage() {
   const { token } = useParams()
@@ -89,29 +91,29 @@ export default function InvitePage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-400">Loading invitation...</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF7F0]">
+      <p className="text-[#9a9a9a]">Loading invitation...</p>
     </div>
   )
 
   if (!invite) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">This invitation link is invalid or has expired.</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF7F0]">
+      <p className="text-[#5a5a5a]">This invitation link is invalid or has expired.</p>
     </div>
   )
 
   if (invite.status === 'accepted') return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF7F0]">
       <div className="text-center">
-        <p className="text-gray-700 font-semibold text-lg mb-2">This invitation has already been accepted.</p>
-        <button onClick={() => router.push('/login')} className="text-blue-600 underline text-sm">Go to login</button>
+        <p className="text-[#2A2A2A] font-semibold text-lg mb-2">This invitation has already been accepted.</p>
+        <button onClick={() => router.push('/login')} className="text-[#141d33] underline text-sm hover:text-[#C9A227] transition-colors">Go to login</button>
       </div>
     </div>
   )
 
   if (invite.status === 'revoked') return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500">This invitation has been revoked. Please contact the other family.</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF7F0]">
+      <p className="text-[#5a5a5a]">This invitation has been revoked. Please contact the other family.</p>
     </div>
   )
 
@@ -119,45 +121,58 @@ export default function InvitePage() {
   const kallahFamily = invite.owner_side === 'kallah' ? invite.owner_family_name : invite.other_family_name
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl">
-        <h1 className="text-2xl font-bold text-blue-900 mb-1">You're Invited! 🎉</h1>
-        <p className="text-gray-500 text-sm mb-1">
-          The <strong>{invite.owner_family_name}</strong> family invited you to collaborate on SimchaPro.
-        </p>
-        <p className="text-gray-500 text-sm mb-6">
-          Wedding: <strong>{invite.owner_side === 'chosson' ? `${invite.owner_family_name} & ${kallahFamily}` : `${chossonFamily} & ${invite.owner_family_name}`}</strong>
-        </p>
+    <div className="min-h-screen bg-[#FAF7F0] flex flex-col">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <a href="/" className="mb-6">
+          <Image
+            src="/images/logo.png"
+            alt="SimchaPro"
+            width={160}
+            height={230}
+            priority
+            className="h-16 w-auto"
+          />
+        </a>
+        <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-sm border border-[#e8e0cc]">
+          <h1 className="font-serif text-2xl font-semibold text-[#141d33] mb-1">You're Invited! 🎉</h1>
+          <p className="text-[#5a5a5a] text-sm mb-1">
+            The <strong>{invite.owner_family_name}</strong> family invited you to collaborate on SimchaPro.
+          </p>
+          <p className="text-[#5a5a5a] text-sm mb-6">
+            Wedding: <strong>{invite.owner_side === 'chosson' ? `${invite.owner_family_name} & ${kallahFamily}` : `${chossonFamily} & ${invite.owner_family_name}`}</strong>
+          </p>
 
-        <div className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email address"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800 disabled:opacity-50"
-          >
-            {submitting ? 'Please wait...' : 'Accept Invitation'}
-          </button>
+          <div className="space-y-3">
+            <input
+              type="email"
+              placeholder="Email address"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            />
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full bg-[#141d33] text-white py-3 rounded-md font-semibold hover:bg-[#1e2a4a] transition-colors disabled:opacity-50"
+            >
+              {submitting ? 'Please wait...' : 'Accept Invitation'}
+            </button>
+          </div>
+
+          <p className="text-xs text-[#9a9a9a] text-center mt-4">
+            Your account is free. Only the Chosson's side pays for SimchaPro.
+          </p>
         </div>
-
-        <p className="text-xs text-gray-400 text-center mt-4">
-          Your account is free. Only the Chosson's side pays for SimchaPro.
-        </p>
       </div>
+      <Footer />
     </div>
   )
 }

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { getAccessStatus } from '../../lib/accessControl'
+import Footer from '../../components/Footer'
+import Header from '../../components/Header'
 
 const CHECKLISTS = {
   'Lchaim': [
@@ -830,22 +832,7 @@ export default function ChecklistPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-blue-900 text-white px-6 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/')}>SimchaPro</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-blue-200 text-sm">Simcha Checklist</span>
-          {!user && (
-            <a href="/login" className="bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-yellow-300">
-              Sign In
-            </a>
-          )}
-          {user && (
-            <span onClick={() => router.push('/dashboard')} className="text-blue-200 text-sm cursor-pointer hover:text-white underline">
-              Dashboard
-            </span>
-          )}
-        </div>
-      </div>
+      <Header user={user} onDashboardClick={() => router.push('/dashboard')} />
 
       <div className="max-w-3xl mx-auto px-4 py-10">
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Simcha Checklist 📋</h2>
@@ -1178,6 +1165,7 @@ export default function ChecklistPage() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   )
 }

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { getAccessStatus } from '../../lib/accessControl'
+import Footer from '../../components/Footer'
+import Image from 'next/image'
 
 const DEFAULT_CATEGORIES = ['Hall', 'Catering', 'Music', 'Photography', 'Flowers', 'Clothing', 'Invitations', 'Transportation', 'Other']
 const DEFAULT_OCCASIONS = ['Shadchen', 'Lchaim/Vort', 'Tenaim', 'Aufruf', 'Wedding', 'Shabbos Sheva Brachos', 'Sheva Brachos', 'Gifts', 'Apartment', 'Furniture', 'General']
@@ -696,13 +698,21 @@ export default function ExpenseTracker() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-blue-900 text-white px-8 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
+      <div className="bg-[#141d33] px-6 py-1.5 flex justify-between items-center border-b border-[#C9A227]/40 shadow-md">
+        <Image
+          src="/images/logo.png"
+          alt="SimchaPro"
+          width={160}
+          height={230}
+          priority
+          className="h-16 w-auto cursor-pointer"
+          onClick={() => router.push('/dashboard')}
+        />
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <span className="text-blue-200 text-sm">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
-          
-          <button onClick={() => exportPDF('shared')} className="bg-white text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">📄 Shared Report</button>
-          <button onClick={() => exportPDF('full')} className="bg-yellow-400 text-blue-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300">📄 My Full Report</button>
+          <span className="text-[#b8c0d4] text-sm hidden sm:inline">{myFamilyName} · {familySettings?.my_side === 'chosson' ? "Chosson's Side" : "Kallah's Side"}</span>
+
+          <button onClick={() => exportPDF('shared')} className="bg-white text-[#141d33] px-3 py-2 rounded-md text-sm font-semibold hover:bg-[#f0ebe0] transition-colors">📄 Shared Report</button>
+          <button onClick={() => exportPDF('full')} className="bg-[#C9A227] text-[#141d33] px-3 py-2 rounded-md text-sm font-semibold hover:bg-[#dab53a] transition-colors">📄 My Full Report</button>
         </div>
       </div>
 
@@ -1316,6 +1326,7 @@ export default function ExpenseTracker() {
           </>
         )}
       </div>
+      <Footer />
     </div>
   )
 }

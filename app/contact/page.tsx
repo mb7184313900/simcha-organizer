@@ -1,27 +1,40 @@
+import Image from 'next/image'
+import Footer from '../../components/Footer'
+
 export default function Contact() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#FAF7F0]">
       {/* Header */}
-      <header className="bg-blue-900 text-white py-4 px-6 flex justify-between items-center">
-        <a href="/" className="text-2xl font-bold">SimchaPro</a>
-        <nav className="flex gap-6">
-          <a href="/checklist" className="hover:text-yellow-300">Checklist</a>
-          <a href="/budget" className="hover:text-yellow-300">Organizer</a>
-          <a href="/login" className="hover:text-yellow-300">Sign In</a>
+      <header className="bg-[#141d33] py-1.5 px-6 flex justify-between items-center sticky top-0 z-40 shadow-md border-b border-[#C9A227]/40">
+        <a href="/" className="flex items-center gap-3">
+          <Image
+            src="/images/logo.png"
+            alt="SimchaPro"
+            width={160}
+            height={230}
+            priority
+            className="h-16 w-auto"
+          />
+        </a>
+        <nav className="flex gap-8 text-sm font-medium tracking-wide">
+          <a href="/checklist" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Checklist</a>
+          <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Organizer</a>
+          <a href="/login" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Sign In</a>
         </nav>
       </header>
 
       {/* Contact Content */}
       <section className="py-20 px-6 max-w-2xl mx-auto text-center">
-        <h2 className="text-4xl font-bold text-blue-900 mb-4">Get In Touch</h2>
-        <p className="text-gray-600 mb-12">
+        <h2 className="font-serif text-4xl font-semibold text-[#141d33] mb-4">Get In Touch</h2>
+        <div className="w-16 h-px bg-[#C9A227] mx-auto mb-6" />
+        <p className="text-[#5a5a5a] mb-12">
           Have a question about SimchaPro? We would love to hear from you.
         </p>
 
         <div className="flex flex-col gap-6 items-center">
           <a
             href="mailto:info@simchapro.com"
-            className="flex items-center gap-3 border border-blue-900 text-blue-900 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 w-full max-w-sm justify-center"
+            className="flex items-center gap-3 border border-[#141d33] text-[#141d33] font-semibold px-8 py-4 rounded-md hover:bg-[#141d33]/5 transition-colors w-full max-w-sm justify-center"
           >
             <span className="text-2xl">✉️</span>
             info@simchapro.com
@@ -31,7 +44,7 @@ export default function Contact() {
             href="https://wa.me/19292443318"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 bg-green-500 hover:bg-green-600 text-white font-bold px-8 py-4 rounded-xl w-full max-w-sm justify-center transition-colors"
+            className="flex items-center gap-3 bg-[#25D366] hover:bg-[#1ebe57] text-white font-semibold px-8 py-4 rounded-md w-full max-w-sm justify-center transition-colors"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -42,10 +55,7 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-blue-900 text-white text-center py-6">
-        <p className="text-blue-300 text-sm">© 2026 SimchaPro. All rights reserved.</p>
-      </footer>
+      <Footer />
     </main>
   )
 }

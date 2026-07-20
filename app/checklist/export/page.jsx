@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import { getAccessStatus } from '../../../lib/accessControl'
+import Image from 'next/image'
 
 const CHECKLISTS = {
   'Lchaim': [
@@ -776,11 +777,21 @@ function ExportPageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-blue-900 text-white px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold cursor-pointer" onClick={() => router.push('/checklist')}>← Back to Checklist</h1>
+      <div className="bg-[#141d33] px-6 py-1.5 flex justify-between items-center border-b border-[#C9A227]/40 shadow-md">
+        <div className="flex items-center gap-4 cursor-pointer" onClick={() => router.push('/checklist')}>
+          <Image
+            src="/images/logo.png"
+            alt="SimchaPro"
+            width={160}
+            height={230}
+            priority
+            className="h-14 w-auto"
+          />
+          <span className="text-[#b8c0d4] text-sm hidden sm:inline">← Back to Checklist</span>
+        </div>
         <button
           onClick={exportToPDF}
-          className="bg-yellow-400 text-blue-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-300"
+          className="bg-[#C9A227] text-[#141d33] px-6 py-2 rounded-md font-semibold hover:bg-[#dab53a] transition-colors"
         >
           📄 Download PDF
         </button>

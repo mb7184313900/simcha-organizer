@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import Footer from '../../components/Footer'
 
 export default function AccountPage() {
   const [user, setUser] = useState(null)
@@ -33,32 +35,40 @@ export default function AccountPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-blue-900 text-white px-8 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold cursor-pointer" onClick={() => router.push('/dashboard')}>SimchaPro</h1>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} className="bg-white text-blue-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50">
+      <div className="bg-[#141d33] px-6 py-1.5 flex justify-between items-center border-b border-[#C9A227]/40 shadow-md">
+        <Image
+          src="/images/logo.png"
+          alt="SimchaPro"
+          width={160}
+          height={230}
+          priority
+          className="h-16 w-auto cursor-pointer"
+          onClick={() => router.push('/dashboard')}
+        />
+        <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} className="bg-white text-[#141d33] px-4 py-2 rounded-md text-sm font-semibold hover:bg-[#f0ebe0] transition-colors">
           Sign Out
         </button>
       </div>
 
       <div className="max-w-2xl mx-auto px-8 py-12">
-        <h2 className="text-3xl font-bold text-blue-900 mb-8">My Account</h2>
+        <h2 className="font-serif text-3xl font-semibold text-[#141d33] mb-8">My Account</h2>
 
-        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
-          <h3 className="text-lg font-bold text-blue-900 mb-4">Account Info</h3>
-          <p className="text-gray-600"><span className="font-medium">Email:</span> {user.email}</p>
+        <div className="bg-white rounded-lg shadow-sm border border-[#e8e0cc] p-8 mb-6">
+          <h3 className="font-serif text-lg font-semibold text-[#141d33] mb-4">Account Info</h3>
+          <p className="text-[#5a5a5a]"><span className="font-medium text-[#2A2A2A]">Email:</span> {user.email}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
-          <h3 className="text-lg font-bold text-blue-900 mb-4">Subscription</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-[#e8e0cc] p-8 mb-6">
+          <h3 className="font-serif text-lg font-semibold text-[#141d33] mb-4">Subscription</h3>
           {sub ? (
             <div className="space-y-3">
-              <p className="text-gray-600"><span className="font-medium">Plan:</span> {sub.plan}</p>
-              <p className="text-gray-600"><span className="font-medium">Status:</span> <span className={`px-2 py-1 rounded-full text-xs font-semibold ${sub.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{sub.status}</span></p>
-              <p className="text-gray-600"><span className="font-medium">Expires:</span> {expiryDate}</p>
-              <p className="text-gray-600"><span className="font-medium">Days left:</span> {daysLeft > 0 ? `${daysLeft} days` : 'Expired'}</p>
+              <p className="text-[#5a5a5a]"><span className="font-medium text-[#2A2A2A]">Plan:</span> {sub.plan}</p>
+              <p className="text-[#5a5a5a]"><span className="font-medium text-[#2A2A2A]">Status:</span> <span className={`px-2 py-1 rounded-full text-xs font-semibold ${sub.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-[#C9A227]/15 text-[#8a6d10]'}`}>{sub.status}</span></p>
+              <p className="text-[#5a5a5a]"><span className="font-medium text-[#2A2A2A]">Expires:</span> {expiryDate}</p>
+              <p className="text-[#5a5a5a]"><span className="font-medium text-[#2A2A2A]">Days left:</span> {daysLeft > 0 ? `${daysLeft} days` : 'Expired'}</p>
             </div>
           ) : (
-            <p className="text-gray-500">No subscription found.</p>
+            <p className="text-[#9a9a9a]">No subscription found.</p>
           )}
         </div>
 
@@ -68,10 +78,11 @@ export default function AccountPage() {
           </div>
         )}
 
-        <a href="/renew" className="block w-full bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800 text-center">
+        <a href="/renew" className="block w-full bg-[#141d33] text-white py-3 rounded-md font-semibold hover:bg-[#1e2a4a] transition-colors text-center">
           Renew Subscription
         </a>
       </div>
+      <Footer />
     </div>
   )
 }
