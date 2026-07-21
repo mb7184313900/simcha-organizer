@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import Image from 'next/image'
@@ -10,8 +10,13 @@ export default function Signup() {
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [agreed, setAgreed] = useState(false)
 
   const handleSignup = async () => {
+    if (!agreed) {
+      setMessage('You must agree to the Terms & Conditions and Privacy Policy to sign up.')
+      return
+    }
     setLoading(true)
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -55,7 +60,25 @@ export default function Signup() {
             <input type="text" placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]" />
             <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]" />
             <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]" />
-            <button onClick={handleSignup} disabled={loading} className="w-full bg-[#141d33] text-white py-3 rounded-md font-semibold hover:bg-[#1e2a4a] transition-colors disabled:opacity-50">
+            <label className="flex items-start gap-2 text-sm text-[#5a5a5a]">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={e => setAgreed(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                I agree to the{' '}
+                <a href="/terms" target="_blank" className="text-[#141d33] font-semibold hover:text-[#C9A227] underline">
+                  Terms & Conditions
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" target="_blank" className="text-[#141d33] font-semibold hover:text-[#C9A227] underline">
+                  Privacy Policy
+                </a>
+              </span>
+            </label>
+            <button onClick={handleSignup} disabled={loading || !agreed} className="w-full bg-[#141d33] text-white py-3 rounded-md font-semibold hover:bg-[#1e2a4a] transition-colors disabled:opacity-50">
               {loading ? 'Creating account...' : 'Start Free Trial'}
             </button>
           </div>

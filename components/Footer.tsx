@@ -1,4 +1,4 @@
-import Image from 'next/image';
+﻿import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -12,10 +12,16 @@ export default function Footer() {
             height={144}
             className="h-10 w-auto"
           />
-          <p className="text-[#b8c0d4] text-sm">© 2026 SimchaPro. All rights reserved.</p>
+          <p className="text-[#b8c0d4] text-sm">(c) 2026 SimchaPro. All rights reserved.</p>
         </div>
 
         <div className="flex items-center gap-6">
+          <a href="/terms" className="text-[#b8c0d4] hover:text-[#C9A227] text-sm transition-colors">
+            Terms & Conditions
+          </a>
+          <a href="/privacy" className="text-[#b8c0d4] hover:text-[#C9A227] text-sm transition-colors">
+            Privacy Policy
+          </a>
           <a href="/contact" className="text-[#b8c0d4] hover:text-[#C9A227] text-sm transition-colors">
             Contact
           </a>
@@ -39,3 +45,4 @@ export default function Footer() {
     </footer>
   );
 }
+
