@@ -25,7 +25,7 @@ export async function POST(req) {
     const session = event.data.object;
     const email = session.customer_email || session.customer_details?.email;
     const user_id = session.metadata?.user_id || null;
-    const wedding_id = session.metadata?.wedding_id || null;
+    const action = session.metadata?.action || null;
     const plan = session.metadata?.plan || 'one_time';
 
     if (!email) {
@@ -33,8 +33,8 @@ export async function POST(req) {
       return new Response('ok', { status: 200 });
     }
 
-    if (!user_id || !wedding_id) {
-      console.error('Missing user_id or wedding_id on checkout session metadata', session.id);
+    if (!user_id) {
+      console.error('No user_id found on checkout session metadata', session.id);
       return new Response('ok', { status: 200 });
     }
 
@@ -45,6 +45,59 @@ export async function POST(req) {
       expires_at.setMonth(expires_at.getMonth() + 6);
     } else {
       expires_at.setFullYear(expires_at.getFullYear() + 1);
+    }
+
+    let wedding_id = session.metadata?.wedding_id || null;
+
+    // This payment is for a brand-new (2nd, 3rd, etc.) wedding — nothing exists yet.
+    // Create the wedding + family_settings now that payment has actually succeeded.
+    if (action === 'new_wedding') {
+      const my_side = session.metadata?.my_side || 'chosson';
+      const my_family_name = session.metadata?.my_family_name;
+      const other_family_name = session.metadata?.other_family_name;
+      const wedding_name = session.metadata?.wedding_name || null;
+      const wedding_date = session.metadata?.wedding_date || null;
+
+      const chosson_family = my_side === 'chosson' ? my_family_name : other_family_name;
+      const kallah_family = my_side === 'kallah' ? my_family_name : other_family_name;
+
+      const { data: newWedding, error: weddingError } = await supabase
+        .from('weddings')
+        .insert({
+          side_a_user_id: user_id,
+          chosson_family,
+          kallah_family,
+          wedding_name,
+          wedding_date
+        })
+        .select()
+        .single();
+
+      if (weddingError || !newWedding) {
+        console.error('Failed to create new wedding after payment', weddingError?.message, session.id);
+        return new Response('ok', { status: 200 });
+      }
+
+      wedding_id = newWedding.id;
+
+      await supabase.from('family_settings').insert({
+        user_id,
+        wedding_id,
+        my_side,
+        my_family_name,
+        other_family_name
+      });
+
+      // Make the newly-paid wedding the active one, so the user lands on it after checkout
+      await supabase.from('user_settings').upsert(
+        { user_id, active_wedding_id: wedding_id, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+    }
+
+    if (!wedding_id) {
+      console.error('No wedding_id resolved for checkout session', session.id);
+      return new Response('ok', { status: 200 });
     }
 
     // One subscription row per wedding — upsert keyed on wedding_id.
