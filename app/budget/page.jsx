@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { getAccessStatus } from '../../lib/accessControl'
+import { getAccessStatus, setActiveWedding } from '../../lib/accessControl'
 import Footer from '../../components/Footer'
 import Image from 'next/image'
 
@@ -14,6 +14,7 @@ const PAYMENT_METHODS = ['Cash', 'Check', 'Zelle', 'Wire Transfer', 'Credit Card
 export default function ExpenseTracker() {
   const [user, setUser] = useState(null)
   const [access, setAccess] = useState(null)
+  const [weddingId, setWeddingId] = useState(null)
   const [tab, setTab] = useState('my')
   const [sortBy, setSortBy] = useState('name')
   const [filterOccasion, setFilterOccasion] = useState('All')
@@ -62,8 +63,8 @@ export default function ExpenseTracker() {
     setTimeout(() => setSuccessMessage(''), 3000)
   }
 
-  const loadWeddingInfo = async (ownerId) => {
-    const { data } = await supabase.from('weddings').select('*').eq('side_a_user_id', ownerId).maybeSingle()
+  const loadWeddingInfo = async (wId) => {
+    const { data } = await supabase.from('weddings').select('*').eq('id', wId).maybeSingle()
     setWeddingInfo(data || null)
   }
 
@@ -75,28 +76,30 @@ export default function ExpenseTracker() {
 
       const status = await getAccessStatus(user)
       setAccess(status)
+      setWeddingId(status.weddingId)
 
       if (!status.hasDataAccess) {
         router.push('/dashboard')
         return
       }
 
-      const weddingOwnerId = status.isSideB ? status.ownerUserId : user.id
-      await loadWeddingInfo(weddingOwnerId)
+      if (status.weddingId) {
+        await loadWeddingInfo(status.weddingId)
+      }
 
-      const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).single()
+      const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).eq('wedding_id', status.weddingId).maybeSingle()
       if (fs) {
         setFamilySettings(fs)
         if (fs.custom_categories) setCustomCategories(JSON.parse(fs.custom_categories))
         if (fs.custom_occasions) setCustomOccasions(JSON.parse(fs.custom_occasions))
         if (status.isSideB) {
           if (status.state === 'revoked') {
-            await loadVendors(user.id)
+            await loadVendors(user.id, status.weddingId)
           } else {
-            await loadVendorsSideB(user.id, status.ownerUserId)
+            await loadVendorsSideB(user.id, status.ownerUserId, status.weddingId)
           }
         } else {
-          await loadVendors(user.id)
+          await loadVendors(user.id, status.weddingId)
         }
       } else {
         setShowFamilySetup(true)
@@ -108,8 +111,27 @@ export default function ExpenseTracker() {
 
   const saveFamilySettings = async () => {
     if (!setupForm.my_family_name || !setupForm.other_family_name) return
+
+    let currentWeddingId = weddingId
+
+    // Create the weddings row — Side A only. Side B gets linked in via the invite accept API instead.
+    if (!isSideB && !currentWeddingId) {
+      const { data: newWedding } = await supabase.from('weddings').insert({
+        side_a_user_id: user.id,
+        chosson_family: setupForm.my_side === 'chosson' ? setupForm.my_family_name : setupForm.other_family_name,
+        kallah_family: setupForm.my_side === 'kallah' ? setupForm.my_family_name : setupForm.other_family_name,
+        wedding_name: setupForm.wedding_name || null,
+        wedding_date: setupForm.wedding_date || null
+      }).select().single()
+      currentWeddingId = newWedding.id
+      setWeddingId(currentWeddingId)
+      await setActiveWedding(user, currentWeddingId)
+      await loadWeddingInfo(currentWeddingId)
+    }
+
     const { data } = await supabase.from('family_settings').insert({
       user_id: user.id,
+      wedding_id: currentWeddingId,
       my_side: setupForm.my_side,
       my_family_name: setupForm.my_family_name,
       other_family_name: setupForm.other_family_name
@@ -117,22 +139,7 @@ export default function ExpenseTracker() {
     setFamilySettings(data[0])
     setShowFamilySetup(false)
 
-    // Create the weddings row — Side A only. Side B gets linked in via the invite accept API instead.
-    if (!isSideB) {
-      const { data: existingWedding } = await supabase.from('weddings').select('id').eq('side_a_user_id', user.id).maybeSingle()
-      if (!existingWedding) {
-        await supabase.from('weddings').insert({
-          side_a_user_id: user.id,
-          chosson_family: setupForm.my_side === 'chosson' ? setupForm.my_family_name : setupForm.other_family_name,
-          kallah_family: setupForm.my_side === 'kallah' ? setupForm.my_family_name : setupForm.other_family_name,
-          wedding_name: setupForm.wedding_name || null,
-          wedding_date: setupForm.wedding_date || null
-        })
-      }
-      await loadWeddingInfo(user.id)
-    }
-
-    await loadVendors(user.id)
+    await loadVendors(user.id, currentWeddingId)
   }
 
   const addCustomCategory = async () => {
@@ -140,7 +147,7 @@ export default function ExpenseTracker() {
     if (!newCustomCategory.trim()) return
     const updated = [...customCategories, newCustomCategory.trim()]
     setCustomCategories(updated)
-    await supabase.from('family_settings').update({ custom_categories: JSON.stringify(updated) }).eq('user_id', user.id)
+    await supabase.from('family_settings').update({ custom_categories: JSON.stringify(updated) }).eq('user_id', user.id).eq('wedding_id', weddingId)
     setNewCustomCategory('')
     setShowAddCategory(false)
   }
@@ -150,19 +157,20 @@ export default function ExpenseTracker() {
     if (!newCustomOccasion.trim()) return
     const updated = [...customOccasions, newCustomOccasion.trim()]
     setCustomOccasions(updated)
-    await supabase.from('family_settings').update({ custom_occasions: JSON.stringify(updated) }).eq('user_id', user.id)
+    await supabase.from('family_settings').update({ custom_occasions: JSON.stringify(updated) }).eq('user_id', user.id).eq('wedding_id', weddingId)
     setNewCustomOccasion('')
     setShowAddOccasion(false)
   }
 
-  const loadVendors = async (userId) => {
-    const { data: myVendors } = await supabase.from('vendors').select('*').eq('user_id', userId)
+  const loadVendors = async (userId, wId) => {
+    const { data: myVendors } = await supabase.from('vendors').select('*').eq('user_id', userId).eq('wedding_id', wId)
 
     // Also load shared vendors entered by Side B (if they accepted an invite from us)
     const { data: invite } = await supabase
       .from('wedding_invites')
       .select('*')
       .eq('owner_user_id', userId)
+      .eq('wedding_id', wId)
       .eq('status', 'accepted')
       .maybeSingle()
 
@@ -172,6 +180,7 @@ export default function ExpenseTracker() {
         .from('vendors')
         .select('*')
         .eq('user_id', invite.accepted_by_user_id)
+        .eq('wedding_id', wId)
         .eq('is_shared', true)
         .eq('entered_by_user_id', invite.accepted_by_user_id)
       sideBVendors = bVendors || []
@@ -187,9 +196,9 @@ export default function ExpenseTracker() {
     setPayments(allPayments)
   }
 
-  const loadVendorsSideB = async (sideBUserId, sideAUserId) => {
-    const { data: sideAVendors } = await supabase.from('vendors').select('*').eq('user_id', sideAUserId).eq('is_shared', true)
-    const { data: sideBVendors } = await supabase.from('vendors').select('*').eq('user_id', sideBUserId)
+  const loadVendorsSideB = async (sideBUserId, sideAUserId, wId) => {
+    const { data: sideAVendors } = await supabase.from('vendors').select('*').eq('user_id', sideAUserId).eq('wedding_id', wId).eq('is_shared', true)
+    const { data: sideBVendors } = await supabase.from('vendors').select('*').eq('user_id', sideBUserId).eq('wedding_id', wId)
     const combined = [...(sideAVendors || []), ...(sideBVendors || [])]
     setVendors(combined)
     const allPayments = {}
@@ -275,21 +284,21 @@ export default function ExpenseTracker() {
 
   useEffect(() => {
     const loadInvite = async () => {
-      if (!user) return
-      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).single()
+      if (!user || !weddingId) return
+      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).eq('wedding_id', weddingId).maybeSingle()
       if (data) setExistingInvite(data)
     }
     loadInvite()
-  }, [user])
+  }, [user, weddingId])
 
   // Note: Invite management (send/revoke/reinstate) is intentionally NOT gated by canEdit.
   // Side A can always manage shared access for the other family, even after edit access has expired.
   const sendInvite = async () => {
-    if (!inviteEmail) return
+    if (!inviteEmail || !weddingId) return
     setInviteStatus('sending')
 
     // Delete any existing invite first so we start fresh
-    await supabase.from('wedding_invites').delete().eq('owner_user_id', user.id)
+    await supabase.from('wedding_invites').delete().eq('owner_user_id', user.id).eq('wedding_id', weddingId)
 
     const res = await fetch('/api/invite/send', {
       method: 'POST',
@@ -297,6 +306,7 @@ export default function ExpenseTracker() {
       body: JSON.stringify({
         invitedEmail: inviteEmail,
         ownerUserId: user.id,
+        weddingId: weddingId,
         ownerFamilyName: myFamilyName,
         ownerSide: familySettings.my_side,
         chossonFamily: chossonName,
@@ -307,7 +317,7 @@ export default function ExpenseTracker() {
     if (result.success) {
       setInviteStatus('sent')
       setShowInviteForm(false)
-      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).maybeSingle()
+      const { data } = await supabase.from('wedding_invites').select('*').eq('owner_user_id', user.id).eq('wedding_id', weddingId).maybeSingle()
       setExistingInvite(data)
     } else {
       setInviteStatus('error')
@@ -315,13 +325,13 @@ export default function ExpenseTracker() {
   }
 
   const revokeInvite = async () => {
-    await supabase.from('wedding_invites').update({ status: 'revoked' }).eq('owner_user_id', user.id)
+    await supabase.from('wedding_invites').update({ status: 'revoked' }).eq('owner_user_id', user.id).eq('wedding_id', weddingId)
     setExistingInvite(prev => ({ ...prev, status: 'revoked' }))
     showSuccess('Access revoked.')
   }
 
   const reinstateInvite = async () => {
-    await supabase.from('wedding_invites').update({ status: 'accepted' }).eq('owner_user_id', user.id)
+    await supabase.from('wedding_invites').update({ status: 'accepted' }).eq('owner_user_id', user.id).eq('wedding_id', weddingId)
     setExistingInvite(prev => ({ ...prev, status: 'accepted' }))
     showSuccess('Access reinstated.')
   }
@@ -483,6 +493,7 @@ export default function ExpenseTracker() {
       split_chosson: parseFloat(newVendor.split_chosson), split_kallah: parseFloat(newVendor.split_kallah),
       vendor_phone: newVendor.vendor_phone, vendor_contact: newVendor.vendor_contact,
       notes: newVendor.notes, user_id: (isSideB && newVendor.is_shared_expense) ? ownerUserId : user.id,
+      wedding_id: weddingId,
       entered_by_user_id: user.id,
       chosson_family: chossonName, kallah_family: kallaName, status: 'Booked'
     }).select()
