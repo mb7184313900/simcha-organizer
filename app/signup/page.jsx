@@ -26,15 +26,40 @@ export default function Signup() {
     if (error) {
       setMessage(error.message)
     } else {
+      // Create a placeholder wedding row — family names get filled in later
+      // during family setup (Expense Tracker) or the Wedding Profile page.
+      const { data: newWedding, error: weddingError } = await supabase
+        .from('weddings')
+        .insert({
+          side_a_user_id: data.user.id,
+          chosson_family: '',
+          kallah_family: ''
+        })
+        .select()
+        .single()
+
+      if (weddingError) {
+        setMessage('Something went wrong setting up your account. Please try again.')
+        setLoading(false)
+        return
+      }
+
       const expires_at = new Date()
       expires_at.setDate(expires_at.getDate() + 7)
       await supabase.from('subscriptions').insert({
         user_id: data.user.id,
+        wedding_id: newWedding.id,
         email,
         plan: 'trial',
         status: 'trial',
         expires_at: expires_at.toISOString(),
       })
+
+      await supabase.from('user_settings').upsert(
+        { user_id: data.user.id, active_wedding_id: newWedding.id, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+
       window.location.href = '/dashboard'
     }
     setLoading(false)
