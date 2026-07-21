@@ -9,18 +9,18 @@ const PRICES = {
 };
 
 export async function POST(req) {
-  const { plan, user_id, email } = await req.json();
+  const { plan, user_id, email, wedding_id } = await req.json();
   const price = PRICES[plan];
 
-  if (!user_id || !email) {
-    return Response.json({ error: 'Missing user_id or email' }, { status: 400 });
+  if (!user_id || !email || !wedding_id) {
+    return Response.json({ error: 'Missing user_id, email, or wedding_id' }, { status: 400 });
   }
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     mode: price.mode,
     customer_email: email,
-    metadata: { plan, user_id },
+    metadata: { plan, user_id, wedding_id },
     line_items: [
       {
         price_data: {

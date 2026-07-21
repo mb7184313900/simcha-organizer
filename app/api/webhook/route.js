@@ -25,10 +25,16 @@ export async function POST(req) {
     const session = event.data.object;
     const email = session.customer_email || session.customer_details?.email;
     const user_id = session.metadata?.user_id || null;
+    const wedding_id = session.metadata?.wedding_id || null;
     const plan = session.metadata?.plan || 'one_time';
 
     if (!email) {
       console.error('No email found on checkout session', session.id);
+      return new Response('ok', { status: 200 });
+    }
+
+    if (!user_id || !wedding_id) {
+      console.error('Missing user_id or wedding_id on checkout session metadata', session.id);
       return new Response('ok', { status: 200 });
     }
 
@@ -41,46 +47,18 @@ export async function POST(req) {
       expires_at.setFullYear(expires_at.getFullYear() + 1);
     }
 
-    if (user_id) {
-      await supabase.from('subscriptions').upsert(
-        {
-          user_id,
-          email,
-          plan,
-          status: 'active',
-          expires_at: expires_at.toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
-    } else {
-      console.error('No user_id found on checkout session metadata', session.id);
-
-      // Defensive fallback: look up an existing row by email before inserting,
-      // so we never create a duplicate row for someone who already has one
-      // (e.g. an existing trial row) without a user_id.
-      const { data: existingByEmail } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('email', email)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existingByEmail) {
-        await supabase.from('subscriptions').update({
-          plan,
-          status: 'active',
-          expires_at: expires_at.toISOString(),
-        }).eq('id', existingByEmail.id);
-      } else {
-        await supabase.from('subscriptions').insert({
-          email,
-          plan,
-          status: 'active',
-          expires_at: expires_at.toISOString(),
-        });
-      }
-    }
+    // One subscription row per wedding — upsert keyed on wedding_id.
+    await supabase.from('subscriptions').upsert(
+      {
+        user_id,
+        wedding_id,
+        email,
+        plan,
+        status: 'active',
+        expires_at: expires_at.toISOString(),
+      },
+      { onConflict: 'wedding_id' }
+    );
 
     // Send the appropriate confirmation email.
     // 'one_time' = brand-new $99 purchase. 'annual'/'semi_annual' = a renewal.
