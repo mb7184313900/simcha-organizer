@@ -131,6 +131,12 @@ export default function Dashboard() {
             <p className="text-gray-500 text-sm">Track shared expenses between both families and stay on budget</p>
           </div>
 
+          <div onClick={() => router.push('/profile')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
+            <div className="text-5xl mb-4">💍</div>
+            <h3 className="text-xl font-bold text-blue-900 mb-2">Wedding Profile</h3>
+            <p className="text-gray-500 text-sm">View or edit the Chosson and Kallah's names, wedding name, and date</p>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm border p-8 text-center opacity-60">
             <div className="text-5xl mb-4">📰</div>
             <h3 className="text-xl font-bold text-blue-900 mb-2">Simcha Magazine</h3>

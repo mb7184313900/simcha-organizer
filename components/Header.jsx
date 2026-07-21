@@ -16,7 +16,7 @@ export default function Header({ user, onDashboardClick }) {
       </a>
       <nav className="flex gap-8 text-sm font-medium tracking-wide items-center">
         <a href="/checklist" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Checklist</a>
-        <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Organizer</a>
+        <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Expense Tracker</a>
         <a href="#" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Magazine</a>
         {user ? (
           <button

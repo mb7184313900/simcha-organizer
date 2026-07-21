@@ -40,6 +40,7 @@ export default function ExpenseTracker() {
   const [newCustomOccasion, setNewCustomOccasion] = useState('')
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddOccasion, setShowAddOccasion] = useState(false)
+  const [vendorToDelete, setVendorToDelete] = useState(null)
   const [newVendor, setNewVendor] = useState({
     name: '', category: 'Hall', occasion: '', total_amount: '', is_my_expense: true, is_shared_expense: false,
     split_chosson: 50, split_kallah: 50, vendor_phone: '', vendor_contact: '',
@@ -403,38 +404,38 @@ export default function ExpenseTracker() {
         <style>
         @page { size: portrait; margin: 0.5in; }
           body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; }
-          .logo-bar { text-align: center; padding: 20px 0 10px; border-bottom: 3px solid #1a3c8f; margin-bottom: 10px; }
-          .logo-text { font-size: 32px; font-weight: 800; color: #1a3c8f; letter-spacing: -0.5px; }
-          .logo-tagline { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
-          h1 { color: #1a3c8f; text-align: center; margin: 15px 0 5px; font-size: 22px; }
-          h2 { color: #1a3c8f; margin-top: 30px; border-bottom: 2px solid #1a3c8f; padding-bottom: 5px; }
+          .logo-bar { text-align: center; padding: 16px 0 14px; border-bottom: 3px solid #C9A227; margin-bottom: 10px; background: #141d33; border-radius: 8px 8px 0 0; }
+          .logo-img { height: 56px; width: auto; }
+          .logo-tagline { font-size: 12px; color: #C9A227; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 6px; }
+          h1 { color: #141d33; text-align: center; margin: 15px 0 5px; font-size: 22px; }
+          h2 { color: #141d33; margin-top: 30px; border-bottom: 2px solid #C9A227; padding-bottom: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-          th { background: #1a3c8f; color: white; padding: 8px; text-align: left; }
+          th { background: #141d33; color: #C9A227; padding: 8px; text-align: left; }
           td { padding: 6px 8px; border-bottom: 1px solid #eee; }
-          .summary-box { background: #f0f4ff; padding: 15px; border-radius: 8px; margin: 15px 0; }
+          .summary-box { background: #f5f2e8; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #C9A227; }
           .balance { font-size: 15px; font-weight: bold; color: #c00; margin: 10px 0 0; }
           .settled { font-size: 15px; font-weight: bold; color: green; margin: 10px 0 0; }
-          .vendor-header { background: #e8edf8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
-          .private-vendor-header { background: #e8f5e8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; }
-          .vendor-summary-line { font-size: 12px; color: #444; padding: 6px 12px; background: #fafafa; border-left: 3px solid #1a3c8f; margin-top: 4px; }
-          .notes-box { background: #fffbea; border-left: 3px solid #e0b400; padding: 8px 12px; margin-top: 6px; font-size: 12px; }
+          .vendor-header { background: #eceef3; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; border-left: 4px solid #141d33; }
+          .private-vendor-header { background: #f5f2e8; padding: 8px 12px; margin-top: 15px; border-radius: 6px; font-weight: bold; font-size: 13px; border-left: 4px solid #C9A227; }
+          .vendor-summary-line { font-size: 12px; color: #444; padding: 6px 12px; background: #fafafa; border-left: 3px solid #141d33; margin-top: 4px; }
+          .notes-box { background: #fffbea; border-left: 3px solid #C9A227; padding: 8px 12px; margin-top: 6px; font-size: 12px; }
           .notes-box ul { margin: 4px 0 0 18px; padding: 0; }
           .subtitle { text-align: center; color: #666; margin: 3px 0; }
-          .wedding-name { text-align: center; font-size: 18px; font-weight: bold; color: #1a3c8f; margin: 8px 0 0; }
+          .wedding-name { text-align: center; font-size: 18px; font-weight: bold; color: #141d33; margin: 8px 0 0; }
           .wedding-date { text-align: center; font-size: 13px; color: #888; margin: 2px 0 10px; }
           .notice { background: #fff3cd; padding: 8px 15px; border-radius: 6px; text-align: center; font-size: 12px; color: #856404; margin: 10px 0; }
-          .print-btn { position: fixed; top: 20px; right: 20px; background: #1a3c8f; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-          .grand-summary { background: #1a3c8f; color: white; padding: 20px; border-radius: 10px; margin-top: 40px; }
-          .grand-summary h2 { color: white; border-bottom: 2px solid rgba(255,255,255,0.4); margin-top: 0; }
+          .print-btn { position: fixed; top: 20px; right: 20px; background: #C9A227; color: #141d33; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+          .grand-summary { background: #141d33; color: white; padding: 20px; border-radius: 10px; margin-top: 40px; border: 2px solid #C9A227; }
+          .grand-summary h2 { color: #C9A227; border-bottom: 2px solid rgba(201,162,39,0.4); margin-top: 0; }
           .grand-summary table { font-size: 14px; }
-          .grand-summary th { background: rgba(255,255,255,0.15); }
+          .grand-summary th { background: rgba(201,162,39,0.15); color: #C9A227; }
           .grand-summary td { border-bottom: 1px solid rgba(255,255,255,0.2); color: white; }
           @media print { .print-btn { display: none; } }
         </style>
       </head><body>
         <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
         <div class="logo-bar">
-          <div class="logo-text">SimchaPro</div>
+          <img class="logo-img" src="${window.location.origin}/images/logo.png" alt="SimchaPro" />
           <div class="logo-tagline">Simcha Planning Made Simple</div>
         </div>
         <h1>${isSharedOnly ? 'Shared Expense Report' : 'Full Expense Report'}</h1>
@@ -538,6 +539,13 @@ export default function ExpenseTracker() {
     await supabase.from('vendors').delete().eq('id', id)
     setVendors(prev => prev.filter(v => v.id !== id))
     setExpandedVendor(null)
+  }
+
+  const confirmDeleteVendor = async () => {
+    if (!vendorToDelete) return
+    await deleteVendor(vendorToDelete.id)
+    setVendorToDelete(null)
+    showSuccess('Vendor deleted.')
   }
 
   const addPayment = async (vendor) => {
@@ -676,15 +684,15 @@ export default function ExpenseTracker() {
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Your Family Name</label>
-            <input placeholder="e.g. Bloom" value={setupForm.my_family_name} onChange={e => setSetupForm(p => ({ ...p, my_family_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input placeholder="e.g. Weiss" value={setupForm.my_family_name} onChange={e => setSetupForm(p => ({ ...p, my_family_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Other Family's Name</label>
-            <input placeholder="e.g. Sharon" value={setupForm.other_family_name} onChange={e => setSetupForm(p => ({ ...p, other_family_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input placeholder="e.g. Schwartz" value={setupForm.other_family_name} onChange={e => setSetupForm(p => ({ ...p, other_family_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Wedding Name (optional)</label>
-            <input placeholder="e.g. Bloom-Sharon Wedding" value={setupForm.wedding_name} onChange={e => setSetupForm(p => ({ ...p, wedding_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input placeholder="e.g. Weiss-Schwartz Wedding" value={setupForm.wedding_name} onChange={e => setSetupForm(p => ({ ...p, wedding_name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Wedding Date (optional)</label>
@@ -719,6 +727,22 @@ export default function ExpenseTracker() {
       {successMessage && (
         <div className="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 font-semibold">
           {successMessage}
+        </div>
+      )}
+
+      {/* Vendor delete confirmation modal */}
+      {vendorToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-bold text-blue-900 mb-2">Delete Vendor?</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete <span className="font-semibold">{vendorToDelete.name}</span>? This will also delete all payments associated with it. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setVendorToDelete(null)} className="flex-1 border py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
+              <button onClick={confirmDeleteVendor} className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-red-600">Confirm Delete</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1315,7 +1339,7 @@ export default function ExpenseTracker() {
                         </div>
 
                         {canEdit && (!isSideB || vendor.entered_by_user_id === user.id) && (
-                          <button onClick={() => deleteVendor(vendor.id)} className="text-red-400 hover:text-red-600 text-xs">Delete vendor</button>
+                          <button onClick={() => setVendorToDelete(vendor)} className="text-red-400 hover:text-red-600 text-xs">Delete vendor</button>
                         )}
                       </div>
                     )}

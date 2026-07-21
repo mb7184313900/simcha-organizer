@@ -19,7 +19,7 @@ export default function Home() {
               </svg>
             </div>
             <h3 className="font-serif text-xl font-semibold text-[#141d33] mb-2">Subscribers Only</h3>
-            <p className="text-[#5a5a5a] text-sm mb-6 leading-relaxed">The Budget Organizer is available to SimchaPro subscribers. Log in or sign up to get started.</p>
+            <p className="text-[#5a5a5a] text-sm mb-6 leading-relaxed">The Expense Tracker is available to SimchaPro subscribers. Log in or sign up to get started.</p>
             <div className="flex flex-col gap-3">
               <a href="/login" className="block bg-[#141d33] text-white py-3 rounded-md font-medium hover:bg-[#1e2a4a] transition-colors">Log In</a>
               <a href="/signup" className="block border border-[#141d33] text-[#141d33] py-3 rounded-md font-medium hover:bg-[#141d33]/5 transition-colors">Sign Up</a>
@@ -59,7 +59,7 @@ export default function Home() {
         </a>
         <nav className="flex gap-8 text-sm font-medium tracking-wide">
           <a href="/checklist" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Checklist</a>
-          <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Organizer</a>
+          <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Expense Tracker</a>
           <a href="#" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Magazine</a>
           <a href="/login" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Sign In</a>
         </nav>
@@ -104,7 +104,7 @@ export default function Home() {
                 <circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.5 1.5-2 3-2s3 .8 3 2-1.5 2-3 2-3 .8-3 2 1.5 2 3 2 3-.5 3-2"/>
               </svg>
             </div>
-            <h4 className="font-serif text-xl font-semibold text-[#141d33] mb-2">Budget Organizer</h4>
+            <h4 className="font-serif text-xl font-semibold text-[#141d33] mb-2">Expense Tracker</h4>
             <p className="text-[#5a5a5a] text-sm leading-relaxed">Track shared expenses between both families, manage vendors, and stay on budget</p>
           </div>
           <div onClick={() => setShowMagazinePopup(true)} className="group text-center p-8 bg-white border border-[#e8e0cc] rounded-lg shadow-sm hover:shadow-lg hover:border-[#C9A227] transition-all cursor-pointer">
@@ -132,7 +132,7 @@ export default function Home() {
             <ul className="text-left text-sm text-[#d8dce8] mb-8 space-y-3">
               <li className="flex items-center gap-2"><span className="text-[#C9A227]">✓</span> Full year of access</li>
               <li className="flex items-center gap-2"><span className="text-[#C9A227]">✓</span> Simcha Checklist</li>
-              <li className="flex items-center gap-2"><span className="text-[#C9A227]">✓</span> Budget Organizer</li>
+              <li className="flex items-center gap-2"><span className="text-[#C9A227]">✓</span> Expense Tracker</li>
               <li className="flex items-center gap-2"><span className="text-[#C9A227]">✓</span> Simcha Magazine</li>
             </ul>
             <a href="/pricing" className="block bg-[#C9A227] text-[#141d33] font-semibold py-3 rounded-md hover:bg-[#dab53a] transition-colors">Start Free Trial</a>

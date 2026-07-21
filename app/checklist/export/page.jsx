@@ -720,30 +720,30 @@ function ExportPageContent() {
         <style>
         @page { size: portrait; margin: 0.5in; }
           body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; }
-          .logo-bar { text-align: center; padding: 20px 0 10px; border-bottom: 3px solid #1a3c8f; margin-bottom: 10px; }
-          .logo-text { font-size: 32px; font-weight: 800; color: #1a3c8f; letter-spacing: -0.5px; }
-          .logo-tagline { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
-          h1 { color: #1a3c8f; text-align: center; margin: 15px 0 5px; font-size: 22px; }
+          .logo-bar { text-align: center; padding: 16px 0 14px; border-bottom: 3px solid #C9A227; margin-bottom: 10px; background: #141d33; border-radius: 8px 8px 0 0; }
+          .logo-img { height: 56px; width: auto; }
+          .logo-tagline { font-size: 12px; color: #C9A227; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 6px; }
+          h1 { color: #141d33; text-align: center; margin: 15px 0 5px; font-size: 22px; }
           .subtitle { text-align: center; color: #666; margin: 3px 0; }
-          .wedding-name { text-align: center; font-size: 18px; font-weight: bold; color: #1a3c8f; margin: 8px 0 0; }
+          .wedding-name { text-align: center; font-size: 18px; font-weight: bold; color: #141d33; margin: 8px 0 0; }
           .wedding-date { text-align: center; font-size: 13px; color: #888; margin: 2px 0 10px; }
-          .progress-box { background: #f0f4ff; padding: 12px 15px; border-radius: 8px; margin: 20px 0; text-align: center; font-size: 13px; color: #444; }
-          .progress-box strong { color: #1a3c8f; }
-          .section-header { font-size: 11px; font-weight: bold; color: #1a3c8f; text-transform: uppercase; letter-spacing: 0.5px; background: #e8edf8; padding: 6px 12px; margin-top: 14px; border-radius: 4px; }
+          .progress-box { background: #f5f2e8; padding: 12px 15px; border-radius: 8px; margin: 20px 0; text-align: center; font-size: 13px; color: #444; border: 1px solid #C9A227; }
+          .progress-box strong { color: #141d33; }
+          .section-header { font-size: 11px; font-weight: bold; color: #141d33; text-transform: uppercase; letter-spacing: 0.5px; background: #eceef3; padding: 6px 12px; margin-top: 14px; border-radius: 4px; border-left: 3px solid #C9A227; }
           .item-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
-          .item-box { flex-shrink: 0; width: 16px; height: 16px; border: 2px solid #1a3c8f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; margin-top: 1px; }
-          .item-checked .item-box { background: #1a3c8f; }
+          .item-box { flex-shrink: 0; width: 16px; height: 16px; border: 2px solid #141d33; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; margin-top: 1px; }
+          .item-checked .item-box { background: #C9A227; border-color: #C9A227; }
           .item-checked .item-text { color: #999; text-decoration: line-through; }
-          .custom-tag { color: #4a7fd6; font-size: 11px; font-style: italic; }
-          .item-date { color: #1a3c8f; font-size: 11px; font-weight: 600; }
+          .custom-tag { color: #8a7326; font-size: 11px; font-style: italic; }
+          .item-date { color: #141d33; font-size: 11px; font-weight: 600; }
           .section-divider { margin-top: 20px; border-top: 2px solid #ddd; padding-top: 4px; }
-          .print-btn { position: fixed; top: 20px; right: 20px; background: #1a3c8f; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+          .print-btn { position: fixed; top: 20px; right: 20px; background: #C9A227; color: #141d33; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
           @media print { .print-btn { display: none; } }
         </style>
       </head><body>
         <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
         <div class="logo-bar">
-          <div class="logo-text">SimchaPro</div>
+          <img class="logo-img" src="${window.location.origin}/images/logo.png" alt="SimchaPro" />
           <div class="logo-tagline">Simcha Planning Made Simple</div>
         </div>
         <h1>${pdfTitle}</h1>
