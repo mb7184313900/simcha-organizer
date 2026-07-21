@@ -80,7 +80,7 @@ export async function POST(req) {
 
       wedding_id = newWedding.id;
 
-      await supabase.from('family_settings').insert({
+      const { error: familySettingsError } = await supabase.from('family_settings').insert({
         user_id,
         wedding_id,
         my_side,
@@ -88,11 +88,19 @@ export async function POST(req) {
         other_family_name
       });
 
+      if (familySettingsError) {
+        console.error('Failed to create family_settings for new wedding', familySettingsError.message, session.id);
+      }
+
       // Make the newly-paid wedding the active one, so the user lands on it after checkout
-      await supabase.from('user_settings').upsert(
+      const { error: activeWeddingError } = await supabase.from('user_settings').upsert(
         { user_id, active_wedding_id: wedding_id, updated_at: new Date().toISOString() },
         { onConflict: 'user_id' }
       );
+
+      if (activeWeddingError) {
+        console.error('Failed to set active_wedding_id after new wedding payment', activeWeddingError.message, session.id);
+      }
     }
 
     if (!wedding_id) {
@@ -101,7 +109,7 @@ export async function POST(req) {
     }
 
     // One subscription row per wedding — upsert keyed on wedding_id.
-    await supabase.from('subscriptions').upsert(
+    const { error: subscriptionError } = await supabase.from('subscriptions').upsert(
       {
         user_id,
         wedding_id,
@@ -112,6 +120,10 @@ export async function POST(req) {
       },
       { onConflict: 'wedding_id' }
     );
+
+    if (subscriptionError) {
+      console.error('Failed to upsert subscription', subscriptionError.message, session.id);
+    }
 
     // Send the appropriate confirmation email.
     // 'one_time' = brand-new $99 purchase. 'annual'/'semi_annual' = a renewal.
