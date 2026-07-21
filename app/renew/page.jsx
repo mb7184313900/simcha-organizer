@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { getAccessStatus } from '../../lib/accessControl';
+import { getAccessStatus, getActiveWeddingId } from '../../lib/accessControl';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Footer from '../../components/Footer';
@@ -42,10 +42,17 @@ export default function RenewPage() {
       return;
     }
 
+    const weddingId = await getActiveWeddingId(user);
+    if (!weddingId) {
+      setLoading(null);
+      alert('We could not find your wedding. Please contact support.');
+      return;
+    }
+
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, user_id: user.id, email: user.email }),
+      body: JSON.stringify({ plan, user_id: user.id, email: user.email, wedding_id: weddingId }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
