@@ -9,12 +9,13 @@ const supabase = createClient(
 
 export async function POST(req) {
   try {
-    const { invitedEmail, ownerUserId, ownerFamilyName, ownerSide, chossonFamily, kallahFamily } = await req.json()
+    const { invitedEmail, ownerUserId, weddingId, ownerFamilyName, ownerSide, chossonFamily, kallahFamily } = await req.json()
 
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 
     await supabase.from('wedding_invites').insert({
       owner_user_id: ownerUserId,
+      wedding_id: weddingId,
       owner_family_name: ownerFamilyName,
       owner_side: ownerSide,
       invited_email: invitedEmail,
