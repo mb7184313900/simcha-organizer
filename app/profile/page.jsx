@@ -10,6 +10,7 @@ import Image from 'next/image'
 export default function WeddingProfile() {
   const [user, setUser] = useState(null)
   const [access, setAccess] = useState(null)
+  const [weddingId, setWeddingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [weddingRow, setWeddingRow] = useState(null)
   const [familySettings, setFamilySettings] = useState(null)
@@ -34,15 +35,14 @@ export default function WeddingProfile() {
 
       const status = await getAccessStatus(user)
       setAccess(status)
+      setWeddingId(status.weddingId)
 
       if (!status.hasDataAccess) {
         router.push('/dashboard')
         return
       }
 
-      const weddingOwnerId = status.isSideB ? status.ownerUserId : user.id
-
-      const { data: wedding } = await supabase.from('weddings').select('*').eq('side_a_user_id', weddingOwnerId).maybeSingle()
+      const { data: wedding } = await supabase.from('weddings').select('*').eq('id', status.weddingId).maybeSingle()
       setWeddingRow(wedding || null)
       setForm({
         chosson_family: wedding?.chosson_family || '',
@@ -51,7 +51,7 @@ export default function WeddingProfile() {
         wedding_date: wedding?.wedding_date || ''
       })
 
-      const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).maybeSingle()
+      const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).eq('wedding_id', status.weddingId).maybeSingle()
       setFamilySettings(fs || null)
 
       setLoading(false)
@@ -84,18 +84,18 @@ export default function WeddingProfile() {
       })
     }
 
-    // Keep Side A's own family_settings row in sync (used by the Expense Tracker for display names)
+    // Keep Side A's own family_settings row (for this wedding) in sync with display names
     if (familySettings) {
       const updatedMyName = familySettings.my_side === 'chosson' ? form.chosson_family.trim() : form.kallah_family.trim()
       const updatedOtherName = familySettings.my_side === 'chosson' ? form.kallah_family.trim() : form.chosson_family.trim()
       await supabase.from('family_settings').update({
         my_family_name: updatedMyName,
         other_family_name: updatedOtherName
-      }).eq('user_id', user.id)
+      }).eq('user_id', user.id).eq('wedding_id', weddingId)
       setFamilySettings(prev => ({ ...prev, my_family_name: updatedMyName, other_family_name: updatedOtherName }))
     }
 
-    const { data: refreshedWedding } = await supabase.from('weddings').select('*').eq('side_a_user_id', user.id).maybeSingle()
+    const { data: refreshedWedding } = await supabase.from('weddings').select('*').eq('id', weddingId).maybeSingle()
     setWeddingRow(refreshedWedding || null)
 
     setSaving(false)
