@@ -34,11 +34,12 @@ export async function POST(req) {
       return Response.json({ error: 'Failed to update invite', detail: updateError.message }, { status: 500 })
     }
 
-    // Get owner's family settings
+    // Get owner's family settings for THIS specific wedding
     const { data: ownerSettings, error: settingsError } = await supabase
       .from('family_settings')
       .select('*')
       .eq('user_id', invite.owner_user_id)
+      .eq('wedding_id', invite.wedding_id)
       .single()
 
     if (settingsError || !ownerSettings) {
@@ -47,11 +48,12 @@ export async function POST(req) {
 
     const sideBSide = ownerSettings.my_side === 'chosson' ? 'kallah' : 'chosson'
 
-    // Check if Side B already has family settings
+    // Check if Side B already has family settings for THIS specific wedding
     const { data: existing } = await supabase
       .from('family_settings')
       .select('id')
       .eq('user_id', userId)
+      .eq('wedding_id', invite.wedding_id)
       .maybeSingle()
 
     if (existing) {
@@ -61,10 +63,11 @@ export async function POST(req) {
         other_family_name: ownerSettings.my_family_name,
         custom_categories: ownerSettings.custom_categories,
         custom_occasions: ownerSettings.custom_occasions
-      }).eq('user_id', userId)
+      }).eq('user_id', userId).eq('wedding_id', invite.wedding_id)
     } else {
       const { error: insertError } = await supabase.from('family_settings').insert({
         user_id: userId,
+        wedding_id: invite.wedding_id,
         my_side: sideBSide,
         my_family_name: ownerSettings.other_family_name,
         other_family_name: ownerSettings.my_family_name,
@@ -76,14 +79,28 @@ export async function POST(req) {
       }
     }
 
-    // Link Side B into the weddings row (if one exists for this owner)
+    // Link Side B into the specific weddings row this invite is for
+    // (matching by wedding_id, not owner_user_id — an owner can have multiple weddings now)
     const { error: weddingLinkError } = await supabase
       .from('weddings')
       .update({ side_b_user_id: userId })
-      .eq('side_a_user_id', invite.owner_user_id)
+      .eq('id', invite.wedding_id)
 
     if (weddingLinkError) {
       console.error('Failed to link side_b_user_id on weddings row:', weddingLinkError.message)
+      // Not fatal — invite acceptance still succeeds even if this fails
+    }
+
+    // Set this wedding as Side B's active wedding so they land on it automatically after login
+    const { error: activeWeddingError } = await supabase
+      .from('user_settings')
+      .upsert(
+        { user_id: userId, active_wedding_id: invite.wedding_id, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+
+    if (activeWeddingError) {
+      console.error('Failed to set active_wedding_id for Side B:', activeWeddingError.message)
       // Not fatal — invite acceptance still succeeds even if this fails
     }
 
