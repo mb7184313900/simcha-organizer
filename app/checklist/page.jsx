@@ -584,6 +584,7 @@ const CHECKLIST_LABELS = {
 export default function ChecklistPage() {
   const [user, setUser] = useState(null)
   const [access, setAccess] = useState(null)
+  const [weddingId, setWeddingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeList, setActiveList] = useState('Lchaim')
   const [items, setItems] = useState({})
@@ -619,9 +620,10 @@ export default function ChecklistPage() {
 
       const status = await getAccessStatus(user)
       setAccess(status)
+      setWeddingId(status.weddingId)
 
-      if (status.hasDataAccess) {
-        await loadUserData(user.id)
+      if (status.hasDataAccess && status.weddingId) {
+        await loadUserData(user.id, status.weddingId)
       } else {
         const initial = {}
         Object.keys(CHECKLISTS).forEach(k => {
@@ -639,11 +641,12 @@ export default function ChecklistPage() {
     init()
   }, [])
 
-  const loadUserData = async (userId) => {
+  const loadUserData = async (userId, wId) => {
     const { data: rows } = await supabase
       .from('checklist_v2')
       .select('*')
       .eq('user_id', userId)
+      .eq('wedding_id', wId)
 
     const built = {}
     Object.keys(CHECKLISTS).forEach(listKey => {
@@ -679,11 +682,12 @@ export default function ChecklistPage() {
   }
 
   const saveItem = async (listKey, itemText, updates) => {
-    if (!user) return
+    if (!user || !weddingId) return
     const { data: existing } = await supabase
       .from('checklist_v2')
       .select('id')
       .eq('user_id', user.id)
+      .eq('wedding_id', weddingId)
       .eq('list_key', listKey)
       .eq('item_text', itemText)
       .single()
@@ -693,6 +697,7 @@ export default function ChecklistPage() {
     } else {
       await supabase.from('checklist_v2').insert({
         user_id: user.id,
+        wedding_id: weddingId,
         list_key: listKey,
         item_text: itemText,
         ...updates,
@@ -762,7 +767,7 @@ export default function ChecklistPage() {
   }
 
   const addCustomItem = async () => {
-    if (!canEdit || !newItemText.trim()) return
+    if (!canEdit || !newItemText.trim() || !weddingId) return
     const text = newItemText.trim()
     setItems(prev => ({
       ...prev,
@@ -771,6 +776,7 @@ export default function ChecklistPage() {
     setNewItemText('')
     await supabase.from('checklist_v2').insert({
       user_id: user.id,
+      wedding_id: weddingId,
       list_key: activeList,
       item_text: text,
       checked: false,
