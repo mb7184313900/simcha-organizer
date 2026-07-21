@@ -10,6 +10,7 @@ import Footer from '../../components/Footer'
 export default function Dashboard() {
   const [user, setUser] = useState(null)
   const [access, setAccess] = useState(null)
+  const [wedding, setWedding] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -23,6 +24,12 @@ export default function Dashboard() {
 
       const status = await getAccessStatus(user)
       setAccess(status)
+
+      if (status.hasDataAccess) {
+        const weddingOwnerId = status.isSideB ? status.ownerUserId : user.id
+        const { data: weddingRow } = await supabase.from('weddings').select('*').eq('side_a_user_id', weddingOwnerId).maybeSingle()
+        setWedding(weddingRow || null)
+      }
     }
     checkAccess()
   }, [])
@@ -53,6 +60,23 @@ export default function Dashboard() {
         </div>
       </div>
     )
+  }
+
+  let daysUntilWedding = null
+  let weddingHasPassed = false
+
+  if (wedding?.wedding_date) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const weddingDateObj = new Date(wedding.wedding_date + 'T00:00:00')
+    const diffTime = weddingDateObj.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      weddingHasPassed = true
+    } else {
+      daysUntilWedding = diffDays
+    }
   }
 
   return (
@@ -113,6 +137,30 @@ export default function Dashboard() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <p className="font-semibold text-red-700">⚠️ Your shared access has been revoked</p>
             <p className="text-red-600 text-sm">The other family has revoked your shared access. You can still view your own private data, but cannot add or edit anything.</p>
+          </div>
+        )}
+
+        {wedding?.wedding_date && (
+          <div className="bg-[#141d33] rounded-2xl shadow-sm p-8 mb-10 text-center border border-[#C9A227]/40">
+            {weddingHasPassed ? (
+              <>
+                <div className="text-5xl mb-3">🎊</div>
+                <h3 className="text-2xl md:text-3xl font-bold text-[#C9A227]" style={{ fontFamily: 'Playfair Display, serif' }}>
+                  Mazel Tov!
+                </h3>
+                <p className="text-[#b8c0d4] mt-2">Wishing you a lifetime of happiness together.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[#b8c0d4] text-sm uppercase tracking-widest mb-2">Countdown to the Big Day</p>
+                <h3 className="text-4xl md:text-5xl font-bold text-[#C9A227]" style={{ fontFamily: 'Playfair Display, serif' }}>
+                  {daysUntilWedding === 0 ? "It's Today!" : `${daysUntilWedding} Day${daysUntilWedding === 1 ? '' : 's'}`}
+                </h3>
+                {daysUntilWedding !== 0 && (
+                  <p className="text-[#b8c0d4] mt-2">until your wedding</p>
+                )}
+              </>
+            )}
           </div>
         )}
 
