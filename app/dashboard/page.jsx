@@ -25,9 +25,8 @@ export default function Dashboard() {
       const status = await getAccessStatus(user)
       setAccess(status)
 
-      if (status.hasDataAccess) {
-        const weddingOwnerId = status.isSideB ? status.ownerUserId : user.id
-        const { data: weddingRow } = await supabase.from('weddings').select('*').eq('side_a_user_id', weddingOwnerId).maybeSingle()
+      if (status.hasDataAccess && status.weddingId) {
+        const { data: weddingRow } = await supabase.from('weddings').select('*').eq('id', status.weddingId).maybeSingle()
         setWedding(weddingRow || null)
       }
     }
@@ -107,6 +106,18 @@ export default function Dashboard() {
           </div>
         )}
 
+        {wedding?.wedding_name && (
+          <div className="flex items-center justify-between bg-white border rounded-xl px-5 py-3 mb-6">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-gray-400">Currently viewing</p>
+              <p className="font-bold text-blue-900">{wedding.wedding_name}</p>
+            </div>
+            <button onClick={() => router.push('/my-weddings')} className="text-sm font-semibold text-[#141d33] underline hover:text-[#C9A227] transition-colors">
+              Switch Wedding
+            </button>
+          </div>
+        )}
+
         {access.state === 'trial' && access.daysLeft !== null && (
           <div className={`rounded-xl p-4 mb-6 font-medium ${access.daysLeft <= 3 ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
             {access.daysLeft <= 3 ? `⚠️ Your free trial expires in ${access.daysLeft} day${access.daysLeft === 1 ? '' : 's'}! ` : `⏳ ${access.daysLeft} days left in your free trial. `}
@@ -183,6 +194,12 @@ export default function Dashboard() {
             <div className="text-5xl mb-4">💍</div>
             <h3 className="text-xl font-bold text-blue-900 mb-2">Wedding Profile</h3>
             <p className="text-gray-500 text-sm">View or edit the Chosson and Kallah's names, wedding name, and date</p>
+          </div>
+
+          <div onClick={() => router.push('/my-weddings')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
+            <div className="text-5xl mb-4">🗂️</div>
+            <h3 className="text-xl font-bold text-blue-900 mb-2">My Weddings</h3>
+            <p className="text-gray-500 text-sm">Switch between weddings, or add a new one if you're planning more than one</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border p-8 text-center opacity-60">
