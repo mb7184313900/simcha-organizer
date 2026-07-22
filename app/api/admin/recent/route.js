@@ -36,7 +36,7 @@ export async function GET(request) {
   // Pull all subscription rows
   const { data: subs, error: subsError } = await supabaseAdmin
     .from('subscriptions')
-    .select('user_id, email, plan, status, created_at, wedding_id')
+    .select('user_id, email, plan, status, created_at, wedding_id, is_free_grant')
     .order('created_at', { ascending: false })
 
   if (subsError) {
@@ -65,6 +65,7 @@ export async function GET(request) {
   }
 
   // --- Recent signups: one row per user, most recent signup first ---
+  // (Free-granted users still show up here -- they did sign up.)
   const userMap = new Map()
 
   for (const row of subs) {
@@ -101,8 +102,9 @@ export async function GET(request) {
     .slice(0, 25)
 
   // --- Recent payments: one row per paid subscription row ---
+  // Excludes rows manually marked as free grants (e.g. family/friends).
   const recentPayments = subs
-    .filter(row => PAID_PLANS.includes(row.plan))
+    .filter(row => PAID_PLANS.includes(row.plan) && !row.is_free_grant)
     .map(row => ({
       name: nameMap.get(row.user_id) || null,
       email: row.email,

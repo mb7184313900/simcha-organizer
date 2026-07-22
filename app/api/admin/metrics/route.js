@@ -35,7 +35,7 @@ export async function GET(request) {
   // Pull all subscription rows
   const { data: subs, error: subsError } = await supabaseAdmin
     .from('subscriptions')
-    .select('user_id, email, plan, status, created_at, wedding_id')
+    .select('user_id, email, plan, status, created_at, wedding_id, is_free_grant')
 
   if (subsError) {
     return NextResponse.json({ error: subsError.message }, { status: 500 })
@@ -75,7 +75,9 @@ export async function GET(request) {
   ).length
 
   // Revenue calculation based on plan values across ALL rows (not deduped --
-  // each paid row represents a real payment/renewal)
+  // each paid row represents a real payment/renewal).
+  // Rows marked is_free_grant = true were manually granted free access
+  // (e.g. family/friends) and are excluded from revenue.
   const PLAN_PRICES = {
     one_time: 99,
     annual: 49,
@@ -84,6 +86,7 @@ export async function GET(request) {
 
   let totalRevenue = 0
   for (const row of subs) {
+    if (row.is_free_grant) continue
     if (PLAN_PRICES[row.plan]) {
       totalRevenue += PLAN_PRICES[row.plan]
     }
