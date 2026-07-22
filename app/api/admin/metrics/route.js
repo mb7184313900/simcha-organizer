@@ -11,8 +11,16 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// Fallback prices, used ONLY for old rows saved before amount_paid existed
+// (where amount_paid is null). Any row with a real amount_paid value uses
+// that instead, since it reflects what was actually charged at the time.
+const FALLBACK_PLAN_PRICES = {
+  one_time: 99,
+  annual: 49,
+  semi_annual: 29,
+}
+
 export async function GET(request) {
-  // Get the caller's access token from the Authorization header
   const authHeader = request.headers.get('authorization')
   const token = authHeader?.replace('Bearer ', '')
 
@@ -20,28 +28,24 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  // Verify the token and get the user it belongs to
   const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
 
   if (userError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  // Server-side admin check -- this is the real security gate
   if (user.email !== ADMIN_EMAIL) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Pull all subscription rows
   const { data: subs, error: subsError } = await supabaseAdmin
     .from('subscriptions')
-    .select('user_id, email, plan, status, created_at, wedding_id, is_free_grant')
+    .select('user_id, email, plan, status, created_at, wedding_id, is_free_grant, amount_paid')
 
   if (subsError) {
     return NextResponse.json({ error: subsError.message }, { status: 500 })
   }
 
-  // Group rows by user_id so we can count unique users and weddings-per-user
   const userMap = new Map()
 
   for (const row of subs) {
@@ -66,7 +70,6 @@ export async function GET(request) {
 
   const totalSignups = uniqueUsers.length
 
-  // A user counts as "trial" if ANY of their subscriptions is currently plan = 'trial'
   const totalTrialUsers = uniqueUsers.filter(u => u.plans.includes('trial')).length
 
   const PAID_PLANS = ['one_time', 'annual', 'semi_annual']
@@ -74,21 +77,18 @@ export async function GET(request) {
     u.plans.some(p => PAID_PLANS.includes(p))
   ).length
 
-  // Revenue calculation based on plan values across ALL rows (not deduped --
-  // each paid row represents a real payment/renewal).
-  // Rows marked is_free_grant = true were manually granted free access
-  // (e.g. family/friends) and are excluded from revenue.
-  const PLAN_PRICES = {
-    one_time: 99,
-    annual: 49,
-    semi_annual: 29,
-  }
-
+  // Revenue: use the real amount_paid when available (accurate regardless
+  // of future pricing changes). Only fall back to the price map for old
+  // rows saved before amount_paid existed. Free grants are always excluded.
   let totalRevenue = 0
   for (const row of subs) {
     if (row.is_free_grant) continue
-    if (PLAN_PRICES[row.plan]) {
-      totalRevenue += PLAN_PRICES[row.plan]
+    if (!PAID_PLANS.includes(row.plan)) continue
+
+    if (row.amount_paid !== null && row.amount_paid !== undefined) {
+      totalRevenue += Number(row.amount_paid)
+    } else {
+      totalRevenue += FALLBACK_PLAN_PRICES[row.plan] || 0
     }
   }
 

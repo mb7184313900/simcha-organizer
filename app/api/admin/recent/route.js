@@ -9,10 +9,19 @@ const supabaseAdmin = createClient(
 )
 
 const PAID_PLANS = ['one_time', 'annual', 'semi_annual']
-const PLAN_PRICES = {
+
+// Fallback prices, used ONLY for old rows saved before amount_paid existed.
+const FALLBACK_PLAN_PRICES = {
   one_time: 99,
   annual: 49,
   semi_annual: 29,
+}
+
+function getAmount(row) {
+  if (row.amount_paid !== null && row.amount_paid !== undefined) {
+    return Number(row.amount_paid)
+  }
+  return FALLBACK_PLAN_PRICES[row.plan] || 0
 }
 
 export async function GET(request) {
@@ -33,18 +42,15 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Pull all subscription rows
   const { data: subs, error: subsError } = await supabaseAdmin
     .from('subscriptions')
-    .select('user_id, email, plan, status, created_at, wedding_id, is_free_grant')
+    .select('user_id, email, plan, status, created_at, expires_at, wedding_id, is_free_grant, amount_paid')
     .order('created_at', { ascending: false })
 
   if (subsError) {
     return NextResponse.json({ error: subsError.message }, { status: 500 })
   }
 
-  // Pull all Supabase Auth users so we can attach display names.
-  // listUsers() is paginated at 50 by default -- perPage raises that ceiling.
   const { data: authData, error: authListError } = await supabaseAdmin.auth.admin.listUsers({
     perPage: 1000,
   })
@@ -53,7 +59,6 @@ export async function GET(request) {
     return NextResponse.json({ error: authListError.message }, { status: 500 })
   }
 
-  // Build a lookup: user_id -> display name (falls back to null if not set)
   const nameMap = new Map()
   for (const authUser of authData.users) {
     const displayName =
@@ -64,8 +69,7 @@ export async function GET(request) {
     nameMap.set(authUser.id, displayName)
   }
 
-  // --- Recent signups: one row per user, most recent signup first ---
-  // (Free-granted users still show up here -- they did sign up.)
+  // --- Recent signups: one row per user ---
   const userMap = new Map()
 
   for (const row of subs) {
@@ -78,42 +82,80 @@ export async function GET(request) {
         plans: [],
         status: row.status,
         signedUpAt: row.created_at,
+        expiresAtList: [],
+        freeWeddingCount: 0,
+        paidWeddingCount: 0,
+        totalPaid: 0,
       })
     }
     const entry = userMap.get(row.user_id)
     entry.weddingIds.add(row.wedding_id)
     entry.plans.push(row.plan)
-    // Keep the earliest created_at as "signed up" date
+    entry.expiresAtList.push(row.expires_at)
+
+    const isRealPaidRow = PAID_PLANS.includes(row.plan) && !row.is_free_grant
+
+    if (row.is_free_grant) {
+      entry.freeWeddingCount += 1
+    } else if (PAID_PLANS.includes(row.plan)) {
+      entry.paidWeddingCount += 1
+    }
+
+    if (isRealPaidRow) {
+      entry.totalPaid += getAmount(row)
+    }
+
     if (new Date(row.created_at) < new Date(entry.signedUpAt)) {
       entry.signedUpAt = row.created_at
     }
   }
 
   const recentSignups = Array.from(userMap.values())
-    .map(u => ({
-      name: u.name,
-      email: u.email,
-      weddingCount: u.weddingIds.size,
-      plan: u.plans.includes('trial') ? 'trial' : u.plans.find(p => PAID_PLANS.includes(p)) || u.plans[0],
-      status: u.status,
-      signedUpAt: u.signedUpAt,
-    }))
+    .map(u => {
+      const sortedExpires = u.expiresAtList
+        .filter(Boolean)
+        .sort((a, b) => new Date(a) - new Date(b))
+
+      let accountType
+      if (u.freeWeddingCount > 0 && u.paidWeddingCount > 0) {
+        accountType = `Mixed (${u.freeWeddingCount} free, ${u.paidWeddingCount} paid)`
+      } else if (u.freeWeddingCount > 0) {
+        accountType = 'Free'
+      } else if (u.paidWeddingCount > 0) {
+        accountType = 'Paid'
+      } else {
+        accountType = 'Trial'
+      }
+
+      return {
+        name: u.name,
+        email: u.email,
+        weddingCount: u.weddingIds.size,
+        plan: u.plans.includes('trial') ? 'trial' : u.plans.find(p => PAID_PLANS.includes(p)) || u.plans[0],
+        status: u.status,
+        signedUpAt: u.signedUpAt,
+        expiresAtList: sortedExpires,
+        soonestExpiresAt: sortedExpires[0] || null,
+        accountType,
+        totalPaid: u.totalPaid,
+      }
+    })
     .sort((a, b) => new Date(b.signedUpAt) - new Date(a.signedUpAt))
-    .slice(0, 25)
+    .slice(0, 50)
 
   // --- Recent payments: one row per paid subscription row ---
-  // Excludes rows manually marked as free grants (e.g. family/friends).
   const recentPayments = subs
     .filter(row => PAID_PLANS.includes(row.plan) && !row.is_free_grant)
     .map(row => ({
       name: nameMap.get(row.user_id) || null,
       email: row.email,
       plan: row.plan,
-      amount: PLAN_PRICES[row.plan],
+      amount: getAmount(row),
       date: row.created_at,
+      expiresAt: row.expires_at,
     }))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 25)
+    .slice(0, 50)
 
   return NextResponse.json({
     recentSignups,

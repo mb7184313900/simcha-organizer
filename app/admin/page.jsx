@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Footer from '../../components/Footer'
@@ -14,6 +14,11 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function formatDateList(dates) {
+  if (!dates || dates.length === 0) return '—'
+  return dates.map(formatDate).join(', ')
 }
 
 function StatCard({ label, value }) {
@@ -41,6 +46,95 @@ function StatusBadge({ status }) {
   )
 }
 
+// A clickable table header that shows a sort arrow when active.
+function SortableHeader({ label, columnKey, sortState, onSort }) {
+  const isActive = sortState.key === columnKey
+  const arrow = isActive ? (sortState.direction === 'asc' ? '▲' : '▼') : ''
+
+  return (
+    <th
+      className="px-6 py-3 font-medium cursor-pointer select-none hover:text-[#141d33]"
+      onClick={() => onSort(columnKey)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {arrow && <span className="text-[10px]">{arrow}</span>}
+      </span>
+    </th>
+  )
+}
+
+// A small text input used under a header to filter that column.
+function FilterInput({ value, onChange, placeholder }) {
+  return (
+    <th className="px-6 pb-3">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder || 'Filter...'}
+        className="w-full text-xs font-normal border border-gray-200 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </th>
+  )
+}
+
+// Generic comparator used for sorting rows by a given key.
+function compareValues(a, b, key) {
+  let valA = a[key]
+  let valB = b[key]
+
+  if (key === 'signedUpAt' || key === 'date' || key === 'soonestExpiresAt' || key === 'expiresAt') {
+    valA = valA ? new Date(valA).getTime() : 0
+    valB = valB ? new Date(valB).getTime() : 0
+    return valA - valB
+  }
+
+  if (typeof valA === 'number' && typeof valB === 'number') {
+    return valA - valB
+  }
+
+  valA = (valA ?? '').toString().toLowerCase()
+  valB = (valB ?? '').toString().toLowerCase()
+  if (valA < valB) return -1
+  if (valA > valB) return 1
+  return 0
+}
+
+// Builds the display string for a row+key the same way the table shows it,
+// so filtering matches what the person actually sees on screen.
+function getDisplayValue(row, key) {
+  switch (key) {
+    case 'weddingCount':
+      return `${row.weddingCount} ${row.weddingCount === 1 ? 'wedding' : 'weddings'}`
+    case 'totalPaid':
+      return row.totalPaid > 0 ? `$${row.totalPaid.toLocaleString()}` : ''
+    case 'signedUpAt':
+      return formatDate(row.signedUpAt)
+    case 'soonestExpiresAt':
+      return formatDateList(row.expiresAtList)
+    case 'date':
+      return formatDate(row.date)
+    case 'expiresAt':
+      return formatDate(row.expiresAt)
+    case 'amount':
+      return `$${row.amount}`
+    default:
+      return (row[key] ?? '').toString()
+  }
+}
+
+function applyFilters(rows, filters) {
+  return rows.filter(row =>
+    Object.entries(filters).every(([key, filterValue]) => {
+      if (!filterValue) return true
+      const display = getDisplayValue(row, key).toLowerCase()
+      return display.includes(filterValue.toLowerCase())
+    })
+  )
+}
+
 export default function AdminDashboard() {
   const [user, setUser] = useState(null)
   const [authorized, setAuthorized] = useState(false)
@@ -51,6 +145,17 @@ export default function AdminDashboard() {
   const [metrics, setMetrics] = useState(null)
   const [recentSignups, setRecentSignups] = useState([])
   const [recentPayments, setRecentPayments] = useState([])
+
+  const [signupsSort, setSignupsSort] = useState({ key: 'signedUpAt', direction: 'desc' })
+  const [paymentsSort, setPaymentsSort] = useState({ key: 'date', direction: 'desc' })
+
+  const [signupsFilters, setSignupsFilters] = useState({
+    name: '', email: '', weddingCount: '', accountType: '', plan: '',
+    status: '', totalPaid: '', signedUpAt: '', soonestExpiresAt: '',
+  })
+  const [paymentsFilters, setPaymentsFilters] = useState({
+    name: '', email: '', plan: '', amount: '', date: '', expiresAt: '',
+  })
 
   const router = useRouter()
 
@@ -118,6 +223,42 @@ export default function AdminDashboard() {
     setLoadingData(false)
   }
 
+  const handleSignupsSort = (key) => {
+    setSignupsSort(prev =>
+      prev.key === key
+        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' }
+    )
+  }
+
+  const handlePaymentsSort = (key) => {
+    setPaymentsSort(prev =>
+      prev.key === key
+        ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' }
+    )
+  }
+
+  const updateSignupsFilter = (key, value) => {
+    setSignupsFilters(prev => ({ ...prev, [key]: value }))
+  }
+
+  const updatePaymentsFilter = (key, value) => {
+    setPaymentsFilters(prev => ({ ...prev, [key]: value }))
+  }
+
+  const filteredSortedSignups = useMemo(() => {
+    const filtered = applyFilters(recentSignups, signupsFilters)
+    const sorted = [...filtered].sort((a, b) => compareValues(a, b, signupsSort.key))
+    return signupsSort.direction === 'desc' ? sorted.reverse() : sorted
+  }, [recentSignups, signupsSort, signupsFilters])
+
+  const filteredSortedPayments = useMemo(() => {
+    const filtered = applyFilters(recentPayments, paymentsFilters)
+    const sorted = [...filtered].sort((a, b) => compareValues(a, b, paymentsSort.key))
+    return paymentsSort.direction === 'desc' ? sorted.reverse() : sorted
+  }, [recentPayments, paymentsSort, paymentsFilters])
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
@@ -159,41 +300,63 @@ export default function AdminDashboard() {
 
             {/* Recent signups */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-10">
-              <div className="px-6 py-4 border-b border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-xl font-serif text-[#141d33]">Recent Signups</h2>
+                <span className="text-xs text-gray-400">
+                  {filteredSortedSignups.length} of {recentSignups.length}
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-gray-100">
-                      <th className="px-6 py-3 font-medium">Name</th>
-                      <th className="px-6 py-3 font-medium">Email</th>
-                      <th className="px-6 py-3 font-medium">Weddings</th>
-                      <th className="px-6 py-3 font-medium">Plan</th>
-                      <th className="px-6 py-3 font-medium">Status</th>
-                      <th className="px-6 py-3 font-medium">Signed Up</th>
+                      <SortableHeader label="Name" columnKey="name" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Email" columnKey="email" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Weddings" columnKey="weddingCount" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Type" columnKey="accountType" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Plan" columnKey="plan" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Status" columnKey="status" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Total Paid" columnKey="totalPaid" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Signed Up" columnKey="signedUpAt" sortState={signupsSort} onSort={handleSignupsSort} />
+                      <SortableHeader label="Expires" columnKey="soonestExpiresAt" sortState={signupsSort} onSort={handleSignupsSort} />
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <FilterInput value={signupsFilters.name} onChange={(v) => updateSignupsFilter('name', v)} />
+                      <FilterInput value={signupsFilters.email} onChange={(v) => updateSignupsFilter('email', v)} />
+                      <FilterInput value={signupsFilters.weddingCount} onChange={(v) => updateSignupsFilter('weddingCount', v)} />
+                      <FilterInput value={signupsFilters.accountType} onChange={(v) => updateSignupsFilter('accountType', v)} />
+                      <FilterInput value={signupsFilters.plan} onChange={(v) => updateSignupsFilter('plan', v)} />
+                      <FilterInput value={signupsFilters.status} onChange={(v) => updateSignupsFilter('status', v)} />
+                      <FilterInput value={signupsFilters.totalPaid} onChange={(v) => updateSignupsFilter('totalPaid', v)} />
+                      <FilterInput value={signupsFilters.signedUpAt} onChange={(v) => updateSignupsFilter('signedUpAt', v)} placeholder="e.g. Jul 2026" />
+                      <FilterInput value={signupsFilters.soonestExpiresAt} onChange={(v) => updateSignupsFilter('soonestExpiresAt', v)} placeholder="e.g. Jul 2026" />
                     </tr>
                   </thead>
                   <tbody>
-                    {recentSignups.length === 0 ? (
+                    {filteredSortedSignups.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-6 text-center text-gray-400">
-                          No signups yet.
+                        <td colSpan={9} className="px-6 py-6 text-center text-gray-400">
+                          No signups match these filters.
                         </td>
                       </tr>
                     ) : (
-                      recentSignups.map((row, i) => (
+                      filteredSortedSignups.map((row, i) => (
                         <tr key={i} className="border-b border-gray-50 last:border-0">
                           <td className="px-6 py-3 text-[#141d33]">{row.name || '—'}</td>
                           <td className="px-6 py-3 text-gray-600">{row.email}</td>
                           <td className="px-6 py-3 text-gray-600">
                             {row.weddingCount} {row.weddingCount === 1 ? 'wedding' : 'weddings'}
                           </td>
+                          <td className="px-6 py-3 text-gray-600">{row.accountType}</td>
                           <td className="px-6 py-3 text-gray-600">{row.plan}</td>
                           <td className="px-6 py-3">
                             <StatusBadge status={row.status} />
                           </td>
+                          <td className="px-6 py-3 text-gray-600">
+                            {row.totalPaid > 0 ? `$${row.totalPaid.toLocaleString()}` : '—'}
+                          </td>
                           <td className="px-6 py-3 text-gray-500">{formatDate(row.signedUpAt)}</td>
+                          <td className="px-6 py-3 text-gray-500">{formatDateList(row.expiresAtList)}</td>
                         </tr>
                       ))
                     )}
@@ -204,35 +367,48 @@ export default function AdminDashboard() {
 
             {/* Recent payments */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-xl font-serif text-[#141d33]">Recent Payments</h2>
+                <span className="text-xs text-gray-400">
+                  {filteredSortedPayments.length} of {recentPayments.length}
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-gray-100">
-                      <th className="px-6 py-3 font-medium">Name</th>
-                      <th className="px-6 py-3 font-medium">Email</th>
-                      <th className="px-6 py-3 font-medium">Plan</th>
-                      <th className="px-6 py-3 font-medium">Amount</th>
-                      <th className="px-6 py-3 font-medium">Date</th>
+                      <SortableHeader label="Name" columnKey="name" sortState={paymentsSort} onSort={handlePaymentsSort} />
+                      <SortableHeader label="Email" columnKey="email" sortState={paymentsSort} onSort={handlePaymentsSort} />
+                      <SortableHeader label="Plan" columnKey="plan" sortState={paymentsSort} onSort={handlePaymentsSort} />
+                      <SortableHeader label="Amount" columnKey="amount" sortState={paymentsSort} onSort={handlePaymentsSort} />
+                      <SortableHeader label="Date" columnKey="date" sortState={paymentsSort} onSort={handlePaymentsSort} />
+                      <SortableHeader label="Expires" columnKey="expiresAt" sortState={paymentsSort} onSort={handlePaymentsSort} />
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <FilterInput value={paymentsFilters.name} onChange={(v) => updatePaymentsFilter('name', v)} />
+                      <FilterInput value={paymentsFilters.email} onChange={(v) => updatePaymentsFilter('email', v)} />
+                      <FilterInput value={paymentsFilters.plan} onChange={(v) => updatePaymentsFilter('plan', v)} />
+                      <FilterInput value={paymentsFilters.amount} onChange={(v) => updatePaymentsFilter('amount', v)} />
+                      <FilterInput value={paymentsFilters.date} onChange={(v) => updatePaymentsFilter('date', v)} placeholder="e.g. Jul 2026" />
+                      <FilterInput value={paymentsFilters.expiresAt} onChange={(v) => updatePaymentsFilter('expiresAt', v)} placeholder="e.g. Jul 2026" />
                     </tr>
                   </thead>
                   <tbody>
-                    {recentPayments.length === 0 ? (
+                    {filteredSortedPayments.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-6 text-center text-gray-400">
-                          No payments yet.
+                        <td colSpan={6} className="px-6 py-6 text-center text-gray-400">
+                          No payments match these filters.
                         </td>
                       </tr>
                     ) : (
-                      recentPayments.map((row, i) => (
+                      filteredSortedPayments.map((row, i) => (
                         <tr key={i} className="border-b border-gray-50 last:border-0">
                           <td className="px-6 py-3 text-[#141d33]">{row.name || '—'}</td>
                           <td className="px-6 py-3 text-gray-600">{row.email}</td>
                           <td className="px-6 py-3 text-gray-600">{row.plan}</td>
                           <td className="px-6 py-3 text-gray-600">${row.amount}</td>
                           <td className="px-6 py-3 text-gray-500">{formatDate(row.date)}</td>
+                          <td className="px-6 py-3 text-gray-500">{formatDate(row.expiresAt)}</td>
                         </tr>
                       ))
                     )}

@@ -28,6 +28,13 @@ export async function POST(req) {
     const action = session.metadata?.action || null;
     const plan = session.metadata?.plan || 'one_time';
 
+    // Stripe's amount_total is in cents -- convert to a plain dollar amount.
+    // This is the ACTUAL amount charged for this session, regardless of
+    // what your current pricing page says today or in the future.
+    const amount_paid = typeof session.amount_total === 'number'
+      ? session.amount_total / 100
+      : null;
+
     if (!email) {
       console.error('No email found on checkout session', session.id);
       return new Response('ok', { status: 200 });
@@ -117,6 +124,7 @@ export async function POST(req) {
         plan,
         status: 'active',
         expires_at: expires_at.toISOString(),
+        amount_paid,
       },
       { onConflict: 'wedding_id' }
     );
