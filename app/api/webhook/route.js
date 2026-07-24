@@ -147,5 +147,73 @@ export async function POST(req) {
     }
   }
 
+  if (event.type === 'charge.refunded') {
+    const charge = event.data.object;
+
+    // Only revoke access on a FULL refund. Partial refunds (goodwill credits, etc.)
+    // should NOT strip access.
+    const isFullRefund = charge.refunded === true && charge.amount_refunded === charge.amount;
+
+    if (!isFullRefund) {
+      console.log('Partial refund received, not revoking access', charge.id);
+      return new Response('ok', { status: 200 });
+    }
+
+    const paymentIntentId = charge.payment_intent;
+    const chargeEmail = charge.billing_details?.email || charge.receipt_email || null;
+
+    let wedding_id = null;
+
+    // The Charge object doesn't carry our metadata — the original Checkout Session does.
+    // Look it up via the payment_intent to recover wedding_id.
+    if (paymentIntentId) {
+      try {
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntentId,
+          limit: 1,
+        });
+
+        if (sessions.data.length > 0) {
+          wedding_id = sessions.data[0].metadata?.wedding_id || null;
+        } else {
+          console.error('No checkout session found for payment_intent', paymentIntentId);
+        }
+      } catch (lookupErr) {
+        console.error('Failed to look up checkout session for refund', lookupErr.message, paymentIntentId);
+      }
+    } else {
+      console.error('No payment_intent found on refunded charge', charge.id);
+    }
+
+    if (wedding_id) {
+      const { error: revokeError } = await supabase
+        .from('subscriptions')
+        .update({ status: 'revoked', plan: 'trial' })
+        .eq('wedding_id', wedding_id);
+
+      if (revokeError) {
+        console.error('Failed to revoke subscription by wedding_id', revokeError.message, wedding_id);
+      } else {
+        console.log('Revoked subscription after full refund (by wedding_id)', wedding_id);
+      }
+    } else if (chargeEmail) {
+      // Fallback: no wedding_id metadata found, try matching by email instead.
+      console.log('No wedding_id found for refund, falling back to email match', chargeEmail);
+
+      const { error: revokeError } = await supabase
+        .from('subscriptions')
+        .update({ status: 'revoked', plan: 'trial' })
+        .eq('email', chargeEmail);
+
+      if (revokeError) {
+        console.error('Failed to revoke subscription by email', revokeError.message, chargeEmail);
+      } else {
+        console.log('Revoked subscription after full refund (by email fallback)', chargeEmail);
+      }
+    } else {
+      console.error('Could not identify subscription to revoke for refunded charge', charge.id);
+    }
+  }
+
   return new Response('ok', { status: 200 });
 }
