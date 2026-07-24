@@ -60,6 +60,12 @@ export default function Signup() {
         { onConflict: 'user_id' }
       )
 
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'sign_up', {
+          method: 'email',
+        })
+      }
+
       window.location.href = '/dashboard'
     }
     setLoading(false)
