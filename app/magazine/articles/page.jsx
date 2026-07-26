@@ -9,6 +9,7 @@ import Link from 'next/link'
 
 export default function ArticlesListPage() {
   const [user, setUser] = useState(null)
+  const [checkingUser, setCheckingUser] = useState(true)
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -16,11 +17,8 @@ export default function ArticlesListPage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      setUser(user || null)
+      setCheckingUser(false)
 
       const { data } = await supabase
         .from('articles')
@@ -38,7 +36,7 @@ export default function ArticlesListPage() {
     router.push('/dashboard')
   }
 
-  if (!user) {
+  if (checkingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
         <p className="text-[#C9A227] font-serif text-lg">Loading...</p>

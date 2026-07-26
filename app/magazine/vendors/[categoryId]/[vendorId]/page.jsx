@@ -19,11 +19,7 @@ export default function VendorDetailPage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      setUser(user || null)
 
       const { data: vendorData, error } = await supabase
         .from('magazine_vendors')
@@ -52,7 +48,7 @@ export default function VendorDetailPage() {
     return `https://wa.me/${digitsOnly}`
   }
 
-  if (!user || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
         <p className="text-[#C9A227] font-serif text-lg">Loading...</p>

@@ -5,7 +5,6 @@ import Footer from '@/components/Footer';
 
 export default function Home() {
   const [showBudgetPopup, setShowBudgetPopup] = useState(false);
-  const [showMagazinePopup, setShowMagazinePopup] = useState(false);
 
   return (
     <main className="min-h-screen bg-[#FAF7F0]">
@@ -29,22 +28,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Magazine Popup */}
-      {showMagazinePopup && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setShowMagazinePopup(false)}>
-          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-sm w-full text-center border border-[#C9A227]/20" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#141d33]/5 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#C9A227" strokeWidth="1.5" className="w-6 h-6">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-            </div>
-            <h3 className="font-serif text-xl font-semibold text-[#141d33] mb-2">Coming Soon</h3>
-            <p className="text-[#5a5a5a] text-sm mb-6 leading-relaxed">Simcha Magazine is on its way — exclusive deals and coupons from top simcha vendors, only for our members.</p>
-            <button onClick={() => setShowMagazinePopup(false)} className="bg-[#141d33] text-white py-3 px-8 rounded-md font-medium hover:bg-[#1e2a4a] transition-colors">Got It</button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="bg-[#141d33] py-1.5 px-6 flex justify-between items-center sticky top-0 z-40 shadow-md border-b border-[#C9A227]/40">
         <a href="/" className="flex items-center gap-3">
@@ -60,7 +43,7 @@ export default function Home() {
         <nav className="flex gap-8 text-sm font-medium tracking-wide">
           <a href="/checklist" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Checklist</a>
           <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Expense Tracker</a>
-          <a href="#" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Magazine</a>
+          <a href="/magazine" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Magazine</a>
           <a href="/login" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Sign In</a>
         </nav>
       </header>
@@ -107,7 +90,7 @@ export default function Home() {
             <h4 className="font-serif text-xl font-semibold text-[#141d33] mb-2">Expense Tracker</h4>
             <p className="text-[#5a5a5a] text-sm leading-relaxed">Track shared expenses between both families, manage vendors, and stay on budget</p>
           </div>
-          <div onClick={() => setShowMagazinePopup(true)} className="group text-center p-8 bg-white border border-[#e8e0cc] rounded-lg shadow-sm hover:shadow-lg hover:border-[#C9A227] transition-all cursor-pointer">
+          <a href="/magazine" className="group text-center p-8 bg-white border border-[#e8e0cc] rounded-lg shadow-sm hover:shadow-lg hover:border-[#C9A227] transition-all cursor-pointer block">
             <div className="w-12 h-12 mx-auto mb-5 rounded-full bg-[#141d33]/5 flex items-center justify-center group-hover:bg-[#C9A227]/10 transition-colors">
               <svg viewBox="0 0 24 24" fill="none" stroke="#C9A227" strokeWidth="1.5" className="w-6 h-6">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -115,7 +98,7 @@ export default function Home() {
             </div>
             <h4 className="font-serif text-xl font-semibold text-[#141d33] mb-2">Simcha Magazine</h4>
             <p className="text-[#5a5a5a] text-sm leading-relaxed">Exclusive deals and coupons from top simcha vendors, only for our members</p>
-          </div>
+          </a>
         </div>
       </section>
 

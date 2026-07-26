@@ -9,6 +9,7 @@ import Link from 'next/link'
 
 export default function CategoryVendorsPage() {
   const [user, setUser] = useState(null)
+  const [checkingUser, setCheckingUser] = useState(true)
   const [category, setCategory] = useState(null)
   const [vendors, setVendors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -18,11 +19,8 @@ export default function CategoryVendorsPage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      setUser(user || null)
+      setCheckingUser(false)
 
       const [{ data: categoryData }, { data: vendorData }] = await Promise.all([
         supabase
@@ -49,7 +47,7 @@ export default function CategoryVendorsPage() {
     router.push('/dashboard')
   }
 
-  if (!user) {
+  if (checkingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
         <p className="text-[#C9A227] font-serif text-lg">Loading...</p>

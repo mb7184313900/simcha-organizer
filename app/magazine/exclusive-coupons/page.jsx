@@ -58,14 +58,15 @@ export default function ExclusiveCouponsPage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      setUser(user || null)
 
-      const access = await getAccessStatus(user)
-      const paidMember = access.state === 'active'
+      let paidMember = false
+
+      if (user) {
+        const access = await getAccessStatus(user)
+        paidMember = access.state === 'active'
+      }
+
       setIsPaidMember(paidMember)
 
       if (paidMember) {
@@ -88,7 +89,7 @@ export default function ExclusiveCouponsPage() {
     router.push('/dashboard')
   }
 
-  if (!user || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
         <p className="text-[#C9A227] font-serif text-lg">Loading...</p>
@@ -115,7 +116,7 @@ export default function ExclusiveCouponsPage() {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10 text-center">
             <p className="text-xl font-serif text-[#141d33] mb-2">For Paid Members Only</p>
             <p className="text-gray-500 mb-6">
-              Upgrade your membership to unlock exclusive vendor coupons when they become available.
+              Become a paid member to unlock exclusive vendor coupons when they become available.
             </p>
             <Link
               href="/pricing"

@@ -202,11 +202,10 @@ export default function Dashboard() {
             <p className="text-gray-500 text-sm">Switch between weddings, or add a new one if you're planning more than one</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border p-8 text-center opacity-60">
+          <div onClick={() => router.push('/magazine')} className="bg-white rounded-2xl shadow-sm border p-8 text-center hover:shadow-md cursor-pointer hover:border-blue-300 transition-all">
             <div className="text-5xl mb-4">📰</div>
             <h3 className="text-xl font-bold text-blue-900 mb-2">Simcha Magazine</h3>
-            <p className="text-gray-500 text-sm">Exclusive deals and coupons from top simcha vendors</p>
-            <span className="inline-block mt-3 text-xs bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-semibold">Coming Soon</span>
+            <p className="text-gray-500 text-sm">Articles, vendor directory, and coupons for your simcha</p>
           </div>
         </div>
       </div>

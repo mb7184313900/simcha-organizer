@@ -33,16 +33,14 @@ const SECTIONS = [
 
 export default function MagazinePage() {
   const [user, setUser] = useState(null)
+  const [checkingUser, setCheckingUser] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      setUser(user || null)
+      setCheckingUser(false)
     }
     loadUser()
   }, [])
@@ -51,7 +49,7 @@ export default function MagazinePage() {
     router.push('/dashboard')
   }
 
-  if (!user) {
+  if (checkingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
         <p className="text-[#C9A227] font-serif text-lg">Loading...</p>

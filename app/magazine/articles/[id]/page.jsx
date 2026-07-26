@@ -18,11 +18,7 @@ export default function ArticleDetailPage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      setUser(user || null)
 
       const { data, error } = await supabase
         .from('articles')
@@ -45,7 +41,7 @@ export default function ArticleDetailPage() {
     router.push('/dashboard')
   }
 
-  if (!user || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
         <p className="text-[#C9A227] font-serif text-lg">Loading...</p>
