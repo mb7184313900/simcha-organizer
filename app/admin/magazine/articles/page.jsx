@@ -5,6 +5,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Footer from '../../../../components/Footer'
 import Link from 'next/link'
+import MagazineAdminNav from '../../../../components/MagazineAdminNav'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import ImageExtension from '@tiptap/extension-image'
@@ -304,6 +305,7 @@ export default function MagazineArticlesAdmin() {
         <p className="text-gray-500 mb-8">
           Write and manage articles shown in the Simcha Magazine.
         </p>
+        <MagazineAdminNav />
 
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">

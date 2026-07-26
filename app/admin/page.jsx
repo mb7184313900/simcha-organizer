@@ -277,6 +277,13 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-serif text-[#141d33] mb-2">Admin Dashboard</h1>
         <p className="text-gray-500 mb-8">Signed in as {user.email}</p>
 
+        <a
+          href="/admin/magazine/categories"
+          className="inline-block bg-[#141d33] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#1e2b4d] mb-8"
+        >
+          Simcha Magazine →
+        </a>
+
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
             {errorMsg}

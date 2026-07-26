@@ -5,6 +5,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Footer from '../../../../components/Footer'
 import Link from 'next/link'
+import MagazineAdminNav from '../../../../components/MagazineAdminNav'
 
 const ADMIN_EMAIL = 'mb7184313900@gmail.com'
 
@@ -240,6 +241,7 @@ export default function MagazineVendorsAdmin() {
         <p className="text-gray-500 mb-8">
           Add and manage vendor ads shown in the Simcha Magazine Vendor Directory.
         </p>
+        <MagazineAdminNav />
 
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
