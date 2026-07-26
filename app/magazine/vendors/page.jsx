@@ -11,6 +11,7 @@ export default function VendorCategoriesPage() {
   const [user, setUser] = useState(null)
   const [checkingUser, setCheckingUser] = useState(true)
   const [categories, setCategories] = useState([])
+  const [counts, setCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -20,12 +21,25 @@ export default function VendorCategoriesPage() {
       setUser(user || null)
       setCheckingUser(false)
 
-      const { data } = await supabase
-        .from('vendor_categories')
-        .select('*')
-        .order('sort_order', { ascending: true })
+      const [{ data: categoryData }, { data: vendorData }] = await Promise.all([
+        supabase
+          .from('vendor_categories')
+          .select('*')
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('magazine_vendors')
+          .select('category_id')
+          .eq('is_published', true),
+      ])
 
-      setCategories(data || [])
+      // Count how many published vendors belong to each category
+      const countMap = {}
+      ;(vendorData || []).forEach((v) => {
+        countMap[v.category_id] = (countMap[v.category_id] || 0) + 1
+      })
+
+      setCategories(categoryData || [])
+      setCounts(countMap)
       setLoading(false)
     }
     load()
@@ -61,17 +75,23 @@ export default function VendorCategoriesPage() {
           <p className="text-gray-400 italic">No categories yet — check back soon.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/magazine/vendors/${category.id}`}
-                className="group bg-white rounded-xl border border-gray-200 px-6 py-5 shadow-sm hover:shadow-md hover:border-[#C9A227] transition-all text-center"
-              >
-                <span className="text-lg font-serif text-[#141d33] group-hover:text-[#C9A227] transition-colors">
-                  {category.name}
-                </span>
-              </Link>
-            ))}
+            {categories.map((category) => {
+              const count = counts[category.id] || 0
+              return (
+                <Link
+                  key={category.id}
+                  href={`/magazine/vendors/${category.id}`}
+                  className="group bg-white rounded-xl border border-gray-200 px-6 py-5 shadow-sm hover:shadow-md hover:border-[#C9A227] transition-all text-center"
+                >
+                  <span className="text-lg font-serif text-[#141d33] group-hover:text-[#C9A227] transition-colors block">
+                    {category.name}
+                  </span>
+                  <span className="text-xs text-gray-400 mt-1 block">
+                    {count === 0 ? 'No vendors yet' : `${count} vendor${count === 1 ? '' : 's'}`}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
