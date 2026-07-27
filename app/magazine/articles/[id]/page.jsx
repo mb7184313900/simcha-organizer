@@ -71,7 +71,7 @@ export default function ArticleDetailPage() {
             )}
             <h1 className="text-4xl font-serif text-[#141d33] mb-8">{article.title}</h1>
             <div
-              className="prose max-w-none prose-headings:font-serif prose-headings:text-[#141d33] prose-img:rounded-lg"
+              className="max-w-none text-gray-700 leading-relaxed [&_h2]:text-2xl [&_h2]:font-serif [&_h2]:font-bold [&_h2]:text-[#141d33] [&_h2]:mb-3 [&_h2]:mt-6 [&_h1]:text-3xl [&_h1]:font-serif [&_h1]:font-bold [&_h1]:text-[#141d33] [&_h1]:mb-3 [&_h1]:mt-6 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_li]:mb-1 [&_strong]:font-bold [&_em]:italic [&_img]:rounded-lg [&_img]:my-4"
               dangerouslySetInnerHTML={{ __html: article.body }}
             />
           </article>
