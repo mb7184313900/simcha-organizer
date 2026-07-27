@@ -102,6 +102,9 @@ export default function MagazineArticlesAdmin() {
   const [heroImageFile, setHeroImageFile] = useState(null)
   const [editorKey, setEditorKey] = useState(0)
 
+  const [htmlMode, setHtmlMode] = useState(false)
+  const [htmlDraft, setHtmlDraft] = useState('')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -188,11 +191,28 @@ export default function MagazineArticlesAdmin() {
     input.click()
   }
 
+  // Switches from the visual editor into raw HTML source view.
+  const enterHtmlMode = () => {
+    setHtmlDraft(body)
+    setHtmlMode(true)
+  }
+
+  // Switches back from raw HTML source view into the visual editor,
+  // applying whatever HTML was typed/pasted.
+  const exitHtmlMode = () => {
+    setBody(htmlDraft)
+    setEditorKey(prev => prev + 1)
+    setHtmlMode(false)
+  }
+
   const handleSave = async () => {
     if (!form.title.trim()) {
       setErrorMsg('Title is required.')
       return
     }
+
+    // If currently in HTML mode, make sure the latest typed HTML is used.
+    const finalBody = htmlMode ? htmlDraft : body
 
     setSaving(true)
     setErrorMsg(null)
@@ -209,7 +229,7 @@ export default function MagazineArticlesAdmin() {
       const payload = {
         title: form.title.trim(),
         hero_image_url: heroImageUrl,
-        body: body,
+        body: finalBody,
         is_published: form.is_published,
       }
 
@@ -232,6 +252,8 @@ export default function MagazineArticlesAdmin() {
       } else {
         setForm(emptyForm())
         setBody('')
+        setHtmlDraft('')
+        setHtmlMode(false)
         setHeroImageFile(null)
         setEditorKey(prev => prev + 1)
         loadArticles()
@@ -252,6 +274,8 @@ export default function MagazineArticlesAdmin() {
       is_published: article.is_published,
     })
     setBody(article.body || '')
+    setHtmlDraft(article.body || '')
+    setHtmlMode(false)
     setHeroImageFile(null)
     setEditorKey(prev => prev + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -260,6 +284,8 @@ export default function MagazineArticlesAdmin() {
   const cancelEdit = () => {
     setForm(emptyForm())
     setBody('')
+    setHtmlDraft('')
+    setHtmlMode(false)
     setHeroImageFile(null)
     setEditorKey(prev => prev + 1)
   }
@@ -305,6 +331,7 @@ export default function MagazineArticlesAdmin() {
         <p className="text-gray-500 mb-8">
           Write and manage articles shown in the Simcha Magazine.
         </p>
+
         <MagazineAdminNav />
 
         {errorMsg && (
@@ -344,13 +371,44 @@ export default function MagazineArticlesAdmin() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Article Body *</label>
-              <RichTextEditor
-                key={editorKey}
-                content={body}
-                onChange={setBody}
-                onInsertImage={handleInsertImage}
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm text-gray-600">Article Body *</label>
+                {!htmlMode ? (
+                  <button
+                    type="button"
+                    onClick={enterHtmlMode}
+                    className="text-xs text-[#C9A227] hover:underline"
+                  >
+                    Switch to HTML Source
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={exitHtmlMode}
+                    className="text-xs text-[#C9A227] hover:underline"
+                  >
+                    Switch to Visual Editor
+                  </button>
+                )}
+              </div>
+
+              {htmlMode ? (
+                <textarea
+                  value={htmlDraft}
+                  onChange={(e) => setHtmlDraft(e.target.value)}
+                  rows={14}
+                  spellCheck={false}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                  placeholder="<p>Paste or type raw HTML here...</p>"
+                />
+              ) : (
+                <RichTextEditor
+                  key={editorKey}
+                  content={body}
+                  onChange={setBody}
+                  onInsertImage={handleInsertImage}
+                />
+              )}
             </div>
 
             <div className="flex items-center gap-2">
