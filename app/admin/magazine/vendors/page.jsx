@@ -169,7 +169,7 @@ export default function MagazineVendorsAdmin() {
 
         const { error: insertError } = await supabase
           .from('magazine_vendors')
-          .insert({ ...payload, sort_order: nextSortOrder })
+          .insert({ ...payload, sort_order: nextSortOrder, status: 'active' })
         error = insertError
       }
 
@@ -231,6 +231,39 @@ export default function MagazineVendorsAdmin() {
     }
   }
 
+  const handleApprove = async (id, name) => {
+    setErrorMsg(null)
+
+    const { error } = await supabase
+      .from('magazine_vendors')
+      .update({ status: 'active', is_published: true })
+      .eq('id', id)
+
+    if (error) {
+      setErrorMsg(`Failed to approve "${name}".`)
+    } else {
+      loadData()
+    }
+  }
+
+  const handleReject = async (id, name) => {
+    const confirmed = window.confirm(`Reject and remove the submission from "${name}"? This cannot be undone.`)
+    if (!confirmed) return
+
+    setErrorMsg(null)
+
+    const { error } = await supabase
+      .from('magazine_vendors')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      setErrorMsg(`Failed to reject "${name}".`)
+    } else {
+      loadData()
+    }
+  }
+
   const handleVendorSortModeChange = async (mode) => {
     setVendorSortMode(mode)
     setErrorMsg(null)
@@ -269,11 +302,14 @@ export default function MagazineVendorsAdmin() {
     }
   }
 
+  const pendingVendors = vendors.filter(v => v.status === 'pending')
+  const nonPendingVendors = vendors.filter(v => v.status !== 'pending')
+
   // Filter vendors by selected category, then sort them for display
   const displayedVendors = () => {
     let list = filterCategoryId === 'all'
-      ? [...vendors]
-      : vendors.filter(v => v.category_id === filterCategoryId)
+      ? [...nonPendingVendors]
+      : nonPendingVendors.filter(v => v.category_id === filterCategoryId)
 
     if (vendorSortMode === 'alphabetical') {
       list.sort((a, b) => a.name.localeCompare(b.name))
@@ -318,6 +354,64 @@ export default function MagazineVendorsAdmin() {
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
             {errorMsg}
+          </div>
+        )}
+
+        {/* Pending Approval section */}
+        {pendingVendors.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-[#C9A227] mb-8">
+            <div className="px-6 py-4 border-b border-gray-200 bg-[#fdf7e7] rounded-t-lg">
+              <h2 className="text-lg font-serif text-[#141d33]">
+                Pending Approval ({pendingVendors.length})
+              </h2>
+            </div>
+            <ul>
+              {pendingVendors.map((vendor) => (
+                <li
+                  key={vendor.id}
+                  className="px-6 py-4 border-b border-gray-50 last:border-0 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-4">
+                    {vendor.thumbnail_image_url ? (
+                      <img
+                        src={vendor.thumbnail_image_url}
+                        alt={vendor.name}
+                        className="w-12 h-12 rounded object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded bg-gray-100 border border-gray-200" />
+                    )}
+                    <div>
+                      <p className="text-[#141d33] font-medium">{vendor.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {vendor.vendor_categories?.name || 'No category'}
+                        {vendor.email && ` · ${vendor.email}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => startEdit(vendor)}
+                      className="text-sm text-[#C9A227] hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleApprove(vendor.id, vendor.name)}
+                      className="text-sm bg-[#141d33] text-white px-3 py-1.5 rounded-md hover:bg-[#1e2b4d]"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleReject(vendor.id, vendor.name)}
+                      className="text-sm text-red-500 hover:underline"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -554,6 +648,9 @@ export default function MagazineVendorsAdmin() {
                       <p className="text-xs text-gray-500">
                         {vendor.vendor_categories?.name || 'No category'}
                         {!vendor.is_published && ' · Unpublished'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        👁 {vendor.view_count || 0} views · 📞 {vendor.click_phone || 0} · 💬 {vendor.click_whatsapp || 0} · 🌐 {vendor.click_website || 0}
                       </p>
                     </div>
                   </div>

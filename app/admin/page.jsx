@@ -46,7 +46,6 @@ function StatusBadge({ status }) {
   )
 }
 
-// A clickable table header that shows a sort arrow when active.
 function SortableHeader({ label, columnKey, sortState, onSort }) {
   const isActive = sortState.key === columnKey
   const arrow = isActive ? (sortState.direction === 'asc' ? '▲' : '▼') : ''
@@ -64,7 +63,6 @@ function SortableHeader({ label, columnKey, sortState, onSort }) {
   )
 }
 
-// A small text input used under a header to filter that column.
 function FilterInput({ value, onChange, placeholder }) {
   return (
     <th className="px-6 pb-3">
@@ -80,7 +78,6 @@ function FilterInput({ value, onChange, placeholder }) {
   )
 }
 
-// Generic comparator used for sorting rows by a given key.
 function compareValues(a, b, key) {
   let valA = a[key]
   let valB = b[key]
@@ -102,8 +99,6 @@ function compareValues(a, b, key) {
   return 0
 }
 
-// Builds the display string for a row+key the same way the table shows it,
-// so filtering matches what the person actually sees on screen.
 function getDisplayValue(row, key) {
   switch (key) {
     case 'weddingCount':
@@ -277,12 +272,10 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-serif text-[#141d33] mb-2">Admin Dashboard</h1>
         <p className="text-gray-500 mb-8">Signed in as {user.email}</p>
 
-        <a
-          href="/admin/magazine/categories"
-          className="inline-block bg-[#141d33] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#1e2b4d] mb-8"
-        >
-          Simcha Magazine →
-        </a>
+        <div className="flex gap-3 mb-8">
+          <a href="/admin/magazine/categories" className="inline-block bg-[#141d33] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#1e2b4d]">Simcha Magazine →</a>
+          <a href="/admin/magazine/revenue" className="inline-block bg-white text-[#141d33] border border-[#141d33] px-6 py-2 rounded-lg font-medium hover:bg-gray-50">Vendor Revenue →</a>
+        </div>
 
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
@@ -294,7 +287,6 @@ export default function AdminDashboard() {
           <p className="text-gray-400 italic">Loading metrics...</p>
         ) : (
           <>
-            {/* Stat cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               <StatCard label="Total Signups" value={metrics?.totalSignups ?? '—'} />
               <StatCard label="Trial Users" value={metrics?.totalTrialUsers ?? '—'} />
@@ -305,7 +297,6 @@ export default function AdminDashboard() {
               />
             </div>
 
-            {/* Recent signups */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-10">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-xl font-serif text-[#141d33]">Recent Signups</h2>
@@ -372,7 +363,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Recent payments */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-xl font-serif text-[#141d33]">Recent Payments</h2>
