@@ -69,6 +69,11 @@ export default function MagazinePage() {
           </p>
         </div>
 
+        <Link href="/advertise" className="block bg-[#141d33] rounded-xl px-8 py-6 mb-12 text-center hover:bg-[#1e2b4d] transition-colors">
+          <p className="text-[#C9A227] font-serif text-xl mb-1">Are you a vendor?</p>
+          <p className="text-white text-sm">Advertise your business in the Simcha Magazine — free for a limited time →</p>
+        </Link>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {SECTIONS.map((section) => (
             <Link

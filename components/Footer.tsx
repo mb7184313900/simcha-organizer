@@ -22,6 +22,9 @@ export default function Footer() {
           <a href="/privacy" className="text-[#b8c0d4] hover:text-[#C9A227] text-sm transition-colors">
             Privacy Policy
           </a>
+          <a href="/advertise" className="text-[#b8c0d4] hover:text-[#C9A227] text-sm transition-colors">
+            Advertise With Us
+          </a>
           <a href="/contact" className="text-[#b8c0d4] hover:text-[#C9A227] text-sm transition-colors">
             Contact
           </a>
