@@ -66,7 +66,7 @@ export default function ArticleDetailPage() {
               <img
                 src={article.hero_image_url}
                 alt={article.title}
-                className="w-full h-72 object-cover rounded-xl mb-8"
+                className="w-full h-auto object-contain rounded-xl mb-8 block"
               />
             )}
             <h1 className="text-4xl font-serif text-[#141d33] mb-8">{article.title}</h1>

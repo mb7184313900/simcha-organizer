@@ -71,7 +71,7 @@ export default function ArticlesListPage() {
                   <img
                     src={article.hero_image_url}
                     alt={article.title}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-auto object-contain block"
                   />
                 )}
                 <div className="p-6">
