@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Footer from '../../../../components/Footer'
@@ -37,7 +37,15 @@ function EditorToolbarButton({ onClick, active, label }) {
   )
 }
 
-function RichTextEditor({ content, onChange, onInsertImage }) {
+// The visual rich text editor.
+// IMPORTANT: `content` is only used as the INITIAL value when the editor
+// mounts. TipTap does not auto-update the doc if `content` changes later
+// on its own -- that's what caused the bug. To force the editor to load
+// fresh HTML (e.g. coming back from HTML Source mode), the parent calls
+// the exposed `setHtml` function via `editorRef`, which calls TipTap's
+// official `editor.commands.setContent(html)` -- the real equivalent of
+// `visualEditor.innerHTML = htmlSource.value`.
+function RichTextEditor({ content, onChange, onInsertImage, editorRef }) {
   const editor = useEditor({
     extensions: [StarterKit, ImageExtension],
     content: content || '',
@@ -46,6 +54,14 @@ function RichTextEditor({ content, onChange, onInsertImage }) {
       onChange(editor.getHTML())
     },
   })
+
+  // Expose the editor instance to the parent so it can push new HTML
+  // into it on demand (used when switching HTML Source -> Visual Editor).
+  useEffect(() => {
+    if (editor && editorRef) {
+      editorRef.current = editor
+    }
+  }, [editor, editorRef])
 
   if (!editor) return null
 
@@ -80,7 +96,7 @@ function RichTextEditor({ content, onChange, onInsertImage }) {
       </div>
       <EditorContent
         editor={editor}
-        className="prose max-w-none p-4 min-h-[250px] focus:outline-none [&_.ProseMirror]:min-h-[230px] [&_.ProseMirror]:outline-none"
+        className="max-w-none p-4 min-h-[250px] focus:outline-none [&_.ProseMirror]:min-h-[230px] [&_.ProseMirror]:outline-none [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-[#141d33] [&_h2]:mb-2 [&_h2]:mt-2 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-3 [&_li]:mb-1 [&_strong]:font-bold [&_em]:italic"
       />
     </div>
   )
@@ -101,6 +117,7 @@ export default function MagazineArticlesAdmin() {
   const [body, setBody] = useState('')
   const [heroImageFile, setHeroImageFile] = useState(null)
   const [editorKey, setEditorKey] = useState(0)
+  const editorRef = useRef(null)
 
   const [htmlMode, setHtmlMode] = useState(false)
   const [htmlDraft, setHtmlDraft] = useState('')
@@ -193,16 +210,34 @@ export default function MagazineArticlesAdmin() {
 
   // Switches from the visual editor into raw HTML source view.
   const enterHtmlMode = () => {
-    setHtmlDraft(body)
+    // Pull the freshest HTML straight from the live editor instance,
+    // rather than relying only on the `body` state (which only updates
+    // on each keystroke via onUpdate -- this is just extra safety).
+    const latestHtml = editorRef.current ? editorRef.current.getHTML() : body
+    setHtmlDraft(latestHtml)
     setHtmlMode(true)
   }
 
-  // Switches back from raw HTML source view into the visual editor,
-  // applying whatever HTML was typed/pasted.
+  // Switches back from raw HTML source view into the visual editor.
+  // This is the key fix: instead of only remounting the editor and hoping
+  // the new `content` prop takes effect, we explicitly push the HTML into
+  // the live editor using TipTap's official command -- the real equivalent
+  // of `visualEditor.innerHTML = htmlSource.value`.
   const exitHtmlMode = () => {
     setBody(htmlDraft)
-    setEditorKey(prev => prev + 1)
     setHtmlMode(false)
+
+    // Give React a tick to render the RichTextEditor (it was unmounted
+    // while in HTML mode), then push the HTML into the fresh editor.
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.commands.setContent(htmlDraft, false)
+      }
+    }, 0)
+
+    // Also bump the key as a fallback safety net in case the editor
+    // instance isn't ready yet when the timeout fires.
+    setEditorKey(prev => prev + 1)
   }
 
   const handleSave = async () => {
@@ -212,7 +247,11 @@ export default function MagazineArticlesAdmin() {
     }
 
     // If currently in HTML mode, make sure the latest typed HTML is used.
-    const finalBody = htmlMode ? htmlDraft : body
+    // Otherwise, pull the freshest HTML directly from the live editor
+    // instance rather than relying only on the `body` state.
+    const finalBody = htmlMode
+      ? htmlDraft
+      : (editorRef.current ? editorRef.current.getHTML() : body)
 
     setSaving(true)
     setErrorMsg(null)
@@ -407,6 +446,7 @@ export default function MagazineArticlesAdmin() {
                   content={body}
                   onChange={setBody}
                   onInsertImage={handleInsertImage}
+                  editorRef={editorRef}
                 />
               )}
             </div>
