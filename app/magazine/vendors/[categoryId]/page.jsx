@@ -22,7 +22,7 @@ export default function CategoryVendorsPage() {
       setUser(user || null)
       setCheckingUser(false)
 
-      const [{ data: categoryData }, { data: vendorData }] = await Promise.all([
+      const [{ data: categoryData }, { data: vendorData }, { data: settingsData }] = await Promise.all([
         supabase
           .from('vendor_categories')
           .select('*')
@@ -32,12 +32,27 @@ export default function CategoryVendorsPage() {
           .from('magazine_vendors')
           .select('*')
           .eq('category_id', params.categoryId)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false }),
+          .eq('is_published', true),
+        supabase
+          .from('magazine_settings')
+          .select('vendor_sort_mode')
+          .limit(1)
+          .maybeSingle(),
       ])
 
+      let sortedVendors = [...(vendorData || [])]
+      const mode = settingsData?.vendor_sort_mode || 'alphabetical'
+
+      if (mode === 'alphabetical') {
+        sortedVendors.sort((a, b) => a.name.localeCompare(b.name))
+      } else if (mode === 'newest') {
+        sortedVendors.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      } else if (mode === 'custom') {
+        sortedVendors.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+      }
+
       setCategory(categoryData)
-      setVendors(vendorData || [])
+      setVendors(sortedVendors)
       setLoading(false)
     }
     load()

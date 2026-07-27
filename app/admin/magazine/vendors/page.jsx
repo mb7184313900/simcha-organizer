@@ -40,6 +40,9 @@ export default function MagazineVendorsAdmin() {
   const [thumbImageFile, setThumbImageFile] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  const [filterCategoryId, setFilterCategoryId] = useState('all')
+  const [vendorSortMode, setVendorSortMode] = useState('alphabetical')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -68,9 +71,10 @@ export default function MagazineVendorsAdmin() {
     setLoading(true)
     setErrorMsg(null)
 
-    const [{ data: categoryData, error: categoryError }, { data: vendorData, error: vendorError }] = await Promise.all([
+    const [{ data: categoryData, error: categoryError }, { data: vendorData, error: vendorError }, { data: settingsData }] = await Promise.all([
       supabase.from('vendor_categories').select('*').order('sort_order', { ascending: true }),
       supabase.from('magazine_vendors').select('*, vendor_categories(name)').order('created_at', { ascending: false }),
+      supabase.from('magazine_settings').select('*').limit(1).maybeSingle(),
     ])
 
     if (categoryError || vendorError) {
@@ -78,6 +82,9 @@ export default function MagazineVendorsAdmin() {
     } else {
       setCategories(categoryData)
       setVendors(vendorData)
+      if (settingsData?.vendor_sort_mode) {
+        setVendorSortMode(settingsData.vendor_sort_mode)
+      }
     }
     setLoading(false)
   }
@@ -154,9 +161,15 @@ export default function MagazineVendorsAdmin() {
           .eq('id', form.id)
         error = updateError
       } else {
+        // New vendors go to the end of their category's custom order
+        const categoryVendors = vendors.filter(v => v.category_id === form.category_id)
+        const nextSortOrder = categoryVendors.length > 0
+          ? Math.max(...categoryVendors.map(v => v.sort_order || 0)) + 1
+          : 1
+
         const { error: insertError } = await supabase
           .from('magazine_vendors')
-          .insert(payload)
+          .insert({ ...payload, sort_order: nextSortOrder })
         error = insertError
       }
 
@@ -218,6 +231,61 @@ export default function MagazineVendorsAdmin() {
     }
   }
 
+  const handleVendorSortModeChange = async (mode) => {
+    setVendorSortMode(mode)
+    setErrorMsg(null)
+
+    const { data: settingsRow } = await supabase.from('magazine_settings').select('id').limit(1).maybeSingle()
+
+    if (settingsRow) {
+      await supabase
+        .from('magazine_settings')
+        .update({ vendor_sort_mode: mode, updated_at: new Date().toISOString() })
+        .eq('id', settingsRow.id)
+    }
+  }
+
+  const moveVendor = async (categoryVendorList, index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= categoryVendorList.length) return
+
+    const current = categoryVendorList[index]
+    const target = categoryVendorList[targetIndex]
+
+    const { error: error1 } = await supabase
+      .from('magazine_vendors')
+      .update({ sort_order: target.sort_order || 0 })
+      .eq('id', current.id)
+
+    const { error: error2 } = await supabase
+      .from('magazine_vendors')
+      .update({ sort_order: current.sort_order || 0 })
+      .eq('id', target.id)
+
+    if (error1 || error2) {
+      setErrorMsg('Failed to reorder vendors.')
+    } else {
+      loadData()
+    }
+  }
+
+  // Filter vendors by selected category, then sort them for display
+  const displayedVendors = () => {
+    let list = filterCategoryId === 'all'
+      ? [...vendors]
+      : vendors.filter(v => v.category_id === filterCategoryId)
+
+    if (vendorSortMode === 'alphabetical') {
+      list.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (vendorSortMode === 'newest') {
+      list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    } else if (vendorSortMode === 'custom') {
+      list.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    }
+
+    return list
+  }
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
@@ -230,6 +298,9 @@ export default function MagazineVendorsAdmin() {
     return null
   }
 
+  const sortedVendors = displayedVendors()
+  const canUseCustomArrows = vendorSortMode === 'custom' && filterCategoryId !== 'all'
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-10">
@@ -241,6 +312,7 @@ export default function MagazineVendorsAdmin() {
         <p className="text-gray-500 mb-8">
           Add and manage vendor ads shown in the Simcha Magazine Vendor Directory.
         </p>
+
         <MagazineAdminNav />
 
         {errorMsg && (
@@ -385,26 +457,89 @@ export default function MagazineVendorsAdmin() {
           </div>
         </div>
 
+        {/* Sort & filter controls */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-lg font-serif text-[#141d33] mb-4">Vendor Order</h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Filter by Category</label>
+              <select
+                value={filterCategoryId}
+                onChange={(e) => setFilterCategoryId(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Sort Vendors By</label>
+              <select
+                value={vendorSortMode}
+                onChange={(e) => handleVendorSortModeChange(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              >
+                <option value="alphabetical">Alphabetical (A-Z)</option>
+                <option value="newest">Newest First</option>
+                <option value="custom">Custom Order</option>
+              </select>
+            </div>
+          </div>
+
+          {vendorSortMode === 'custom' && filterCategoryId === 'all' && (
+            <p className="text-xs text-gray-400 mt-3">
+              Select a specific category above to reorder vendors within it.
+            </p>
+          )}
+          {vendorSortMode === 'custom' && filterCategoryId !== 'all' && (
+            <p className="text-xs text-gray-400 mt-3">
+              Use the ↑ and ↓ buttons below to arrange vendors in your preferred order.
+            </p>
+          )}
+        </div>
+
         {/* Vendor list */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-serif text-[#141d33]">
-              Current Vendors ({vendors.length})
+              Current Vendors ({sortedVendors.length})
             </h2>
           </div>
 
           {loading ? (
             <p className="text-gray-400 italic p-6">Loading vendors...</p>
-          ) : vendors.length === 0 ? (
+          ) : sortedVendors.length === 0 ? (
             <p className="text-gray-400 italic p-6">No vendors yet. Add one above.</p>
           ) : (
             <ul>
-              {vendors.map((vendor) => (
+              {sortedVendors.map((vendor, index) => (
                 <li
                   key={vendor.id}
                   className="px-6 py-4 border-b border-gray-50 last:border-0 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-4">
+                    {canUseCustomArrows && (
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => moveVendor(sortedVendors, index, 'up')}
+                          disabled={index === 0}
+                          className="text-gray-400 hover:text-[#141d33] disabled:opacity-20 text-xs leading-none px-1"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onClick={() => moveVendor(sortedVendors, index, 'down')}
+                          disabled={index === sortedVendors.length - 1}
+                          className="text-gray-400 hover:text-[#141d33] disabled:opacity-20 text-xs leading-none px-1"
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    )}
                     {vendor.thumbnail_image_url ? (
                       <img
                         src={vendor.thumbnail_image_url}

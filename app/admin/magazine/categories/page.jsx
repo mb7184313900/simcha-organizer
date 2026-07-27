@@ -15,6 +15,8 @@ export default function MagazineCategoriesAdmin() {
   const [checking, setChecking] = useState(true)
 
   const [categories, setCategories] = useState([])
+  const [vendorCounts, setVendorCounts] = useState({})
+  const [sortMode, setSortMode] = useState('alphabetical')
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState(null)
 
@@ -52,17 +54,81 @@ export default function MagazineCategoriesAdmin() {
     setLoading(true)
     setErrorMsg(null)
 
-    const { data, error } = await supabase
-      .from('vendor_categories')
-      .select('*')
-      .order('sort_order', { ascending: true })
+    const [{ data: categoryData, error: categoryError }, { data: vendorData }, { data: settingsData }] = await Promise.all([
+      supabase.from('vendor_categories').select('*').order('sort_order', { ascending: true }),
+      supabase.from('magazine_vendors').select('category_id').eq('is_published', true),
+      supabase.from('magazine_settings').select('*').limit(1).maybeSingle(),
+    ])
 
-    if (error) {
+    if (categoryError) {
       setErrorMsg('Failed to load categories.')
     } else {
-      setCategories(data)
+      setCategories(categoryData)
+
+      const countMap = {}
+      ;(vendorData || []).forEach((v) => {
+        countMap[v.category_id] = (countMap[v.category_id] || 0) + 1
+      })
+      setVendorCounts(countMap)
+
+      if (settingsData?.category_sort_mode) {
+        setSortMode(settingsData.category_sort_mode)
+      }
     }
     setLoading(false)
+  }
+
+  const displayedCategories = () => {
+    const list = [...categories]
+
+    if (sortMode === 'alphabetical') {
+      return list.sort((a, b) => a.name.localeCompare(b.name))
+    }
+    if (sortMode === 'most_vendors') {
+      return list.sort((a, b) => (vendorCounts[b.id] || 0) - (vendorCounts[a.id] || 0))
+    }
+    // custom -- already in sort_order from the query
+    return list
+  }
+
+  const handleSortModeChange = async (mode) => {
+    setSortMode(mode)
+    setErrorMsg(null)
+
+    const { data: settingsRow } = await supabase.from('magazine_settings').select('id').limit(1).maybeSingle()
+
+    if (settingsRow) {
+      await supabase
+        .from('magazine_settings')
+        .update({ category_sort_mode: mode, updated_at: new Date().toISOString() })
+        .eq('id', settingsRow.id)
+    }
+  }
+
+  const moveCategory = async (index, direction) => {
+    const list = displayedCategories()
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= list.length) return
+
+    const current = list[index]
+    const target = list[targetIndex]
+
+    // Swap their sort_order values
+    const { error: error1 } = await supabase
+      .from('vendor_categories')
+      .update({ sort_order: target.sort_order })
+      .eq('id', current.id)
+
+    const { error: error2 } = await supabase
+      .from('vendor_categories')
+      .update({ sort_order: current.sort_order })
+      .eq('id', target.id)
+
+    if (error1 || error2) {
+      setErrorMsg('Failed to reorder categories.')
+    } else {
+      loadCategories()
+    }
   }
 
   const handleAdd = async () => {
@@ -145,6 +211,8 @@ export default function MagazineCategoriesAdmin() {
     return null
   }
 
+  const sortedCategories = displayedCategories()
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-6 py-10">
@@ -156,6 +224,7 @@ export default function MagazineCategoriesAdmin() {
         <p className="text-gray-500 mb-8">
           Manage the vendor categories shown in the Simcha Magazine Vendor Directory.
         </p>
+
         <MagazineAdminNav />
 
         {errorMsg && (
@@ -186,21 +255,40 @@ export default function MagazineCategoriesAdmin() {
           </div>
         </div>
 
+        {/* Sort mode selector */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-lg font-serif text-[#141d33] mb-4">Category Order</h2>
+          <select
+            value={sortMode}
+            onChange={(e) => handleSortModeChange(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+          >
+            <option value="alphabetical">Alphabetical (A-Z)</option>
+            <option value="most_vendors">Most Vendors First</option>
+            <option value="custom">Custom Order</option>
+          </select>
+          {sortMode === 'custom' && (
+            <p className="text-xs text-gray-400 mt-2">
+              Use the ↑ and ↓ buttons below to arrange categories in your preferred order.
+            </p>
+          )}
+        </div>
+
         {/* Category list */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-serif text-[#141d33]">
-              Current Categories ({categories.length})
+              Current Categories ({sortedCategories.length})
             </h2>
           </div>
 
           {loading ? (
             <p className="text-gray-400 italic p-6">Loading categories...</p>
-          ) : categories.length === 0 ? (
+          ) : sortedCategories.length === 0 ? (
             <p className="text-gray-400 italic p-6">No categories yet. Add one above.</p>
           ) : (
             <ul>
-              {categories.map((category) => (
+              {sortedCategories.map((category, index) => (
                 <li
                   key={category.id}
                   className="px-6 py-3 border-b border-gray-50 last:border-0 flex items-center justify-between"
@@ -230,7 +318,30 @@ export default function MagazineCategoriesAdmin() {
                     </div>
                   ) : (
                     <>
-                      <span className="text-[#141d33]">{category.name}</span>
+                      <div className="flex items-center gap-3">
+                        {sortMode === 'custom' && (
+                          <div className="flex flex-col">
+                            <button
+                              onClick={() => moveCategory(index, 'up')}
+                              disabled={index === 0}
+                              className="text-gray-400 hover:text-[#141d33] disabled:opacity-20 text-xs leading-none px-1"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              onClick={() => moveCategory(index, 'down')}
+                              disabled={index === sortedCategories.length - 1}
+                              className="text-gray-400 hover:text-[#141d33] disabled:opacity-20 text-xs leading-none px-1"
+                            >
+                              ▼
+                            </button>
+                          </div>
+                        )}
+                        <span className="text-[#141d33]">{category.name}</span>
+                        <span className="text-xs text-gray-400">
+                          ({vendorCounts[category.id] || 0})
+                        </span>
+                      </div>
                       <div className="flex items-center gap-4">
                         <button
                           onClick={() => startEditing(category)}

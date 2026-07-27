@@ -21,7 +21,7 @@ export default function VendorCategoriesPage() {
       setUser(user || null)
       setCheckingUser(false)
 
-      const [{ data: categoryData }, { data: vendorData }] = await Promise.all([
+      const [{ data: categoryData }, { data: vendorData }, { data: settingsData }] = await Promise.all([
         supabase
           .from('vendor_categories')
           .select('*')
@@ -30,15 +30,29 @@ export default function VendorCategoriesPage() {
           .from('magazine_vendors')
           .select('category_id')
           .eq('is_published', true),
+        supabase
+          .from('magazine_settings')
+          .select('category_sort_mode')
+          .limit(1)
+          .maybeSingle(),
       ])
 
-      // Count how many published vendors belong to each category
       const countMap = {}
       ;(vendorData || []).forEach((v) => {
         countMap[v.category_id] = (countMap[v.category_id] || 0) + 1
       })
 
-      setCategories(categoryData || [])
+      let sortedCategories = [...(categoryData || [])]
+      const mode = settingsData?.category_sort_mode || 'alphabetical'
+
+      if (mode === 'alphabetical') {
+        sortedCategories.sort((a, b) => a.name.localeCompare(b.name))
+      } else if (mode === 'most_vendors') {
+        sortedCategories.sort((a, b) => (countMap[b.id] || 0) - (countMap[a.id] || 0))
+      }
+      // 'custom' mode keeps the sort_order from the query as-is
+
+      setCategories(sortedCategories)
       setCounts(countMap)
       setLoading(false)
     }
