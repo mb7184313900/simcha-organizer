@@ -4,6 +4,9 @@ import HomeClient from './HomeClient';
 export const metadata: Metadata = {
   title: 'SimchaPro | Jewish Wedding Planner & Simcha Checklist for the Frum Community',
   description: 'The complete simcha planner for the heimish and frum community. Organize your Chosson and Kallah planning with our wedding checklist, budget tracker, and vendor directory — built for Jewish weddings.',
+  verification: {
+    google: 'fmegRSGlrJkH1p3UgPLCrCuJp0X3Ybkn5Mcl9S-TX2A',
+  },
   openGraph: {
     title: 'SimchaPro | Jewish Wedding Planner & Simcha Checklist',
     description: 'The complete simcha planner for the heimish and frum community. Organize your Chosson and Kallah planning with our wedding checklist, budget tracker, and vendor directory.',
