@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /budget
+Disallow: /checklist
+Disallow: /profile
+Disallow: /my-weddings
+Disallow: /api/
+
+Sitemap: https://simchapro.com/sitemap.xml
