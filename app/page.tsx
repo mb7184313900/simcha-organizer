@@ -22,6 +22,62 @@ export const metadata: Metadata = {
   },
 };
 
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'SimchaPro',
+  url: 'https://simchapro.com',
+  logo: 'https://simchapro.com/assets/logo/simchapro-logo-gold-transparent.png',
+  description: 'The complete simcha planning platform for the heimish and frum Jewish community.',
+  email: 'info@simchapro.com',
+};
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'SimchaPro',
+  url: 'https://simchapro.com',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://simchapro.com/magazine/vendors?search={search_term_string}',
+    },
+    'query-input': 'required name=search_term_string',
+  },
+};
+
+const softwareApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'SimchaPro',
+  applicationCategory: 'LifestyleApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '99.00',
+    priceCurrency: 'USD',
+  },
+  description: 'A simcha planning platform for the heimish and frum Jewish community, featuring a wedding checklist, expense tracker, and vendor directory.',
+  url: 'https://simchapro.com',
+};
+
 export default function Home() {
-  return <HomeClient />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+      />
+      <HomeClient />
+    </>
+  );
 }
