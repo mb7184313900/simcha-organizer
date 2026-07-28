@@ -5,6 +5,22 @@ import Footer from '../../components/Footer'
 export const metadata: Metadata = {
   title: 'Contact Us | SimchaPro Jewish Wedding Planner',
   description: 'Get in touch with the SimchaPro team — reach us by email or WhatsApp with any questions about our simcha planning tools for the frum and heimish community.',
+  openGraph: {
+    title: 'Contact Us | SimchaPro Jewish Wedding Planner',
+    description: 'Get in touch with the SimchaPro team — reach us by email or WhatsApp with any questions about our simcha planning tools.',
+    url: 'https://simchapro.com/contact',
+    siteName: 'SimchaPro',
+    images: [
+      {
+        url: 'https://simchapro.com/assets/logo/simchapro-logo-gold-transparent.png',
+        width: 1200,
+        height: 630,
+        alt: 'SimchaPro',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
 };
 
 export default function Contact() {
