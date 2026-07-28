@@ -37,7 +37,10 @@ export default function Contact() {
 
         <div className="flex flex-col gap-6 items-center">
           <a href="mailto:info@simchapro.com" className="flex items-center gap-3 border border-[#141d33] text-[#141d33] font-semibold px-8 py-4 rounded-md hover:bg-[#141d33]/5 transition-colors w-full max-w-sm justify-center">
-            <span className="text-2xl">Email</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M2 7l10 6 10-6"/>
+            </svg>
             info@simchapro.com
           </a>
 
