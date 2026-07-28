@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { sendSideBAcceptedEmail } from '../../../../lib/email/sendSideBAccepted'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -101,6 +102,21 @@ export async function POST(req) {
 
     if (activeWeddingError) {
       console.error('Failed to set active_wedding_id for Side B:', activeWeddingError.message)
+      // Not fatal — invite acceptance still succeeds even if this fails
+    }
+
+    // Notify Side A that Side B has accepted the invite
+    try {
+      const { data: ownerAuthData, error: ownerAuthError } = await supabase.auth.admin.getUserById(invite.owner_user_id)
+
+      if (ownerAuthError || !ownerAuthData?.user?.email) {
+        console.error('Failed to look up owner email for acceptance notification:', ownerAuthError?.message)
+      } else {
+        const sideBDisplayName = ownerSettings.other_family_name || invite.invited_email
+        await sendSideBAcceptedEmail(ownerAuthData.user.email, sideBDisplayName)
+      }
+    } catch (emailErr) {
+      console.error('Failed to send Side B accepted notification email:', emailErr.message)
       // Not fatal — invite acceptance still succeeds even if this fails
     }
 
