@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { wrapEmail } from '../../../../lib/email/templates';
+import { sendVendorSubmissionConfirmation } from '../../../../lib/email/sendVendorSubmissionConfirmation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -64,6 +65,7 @@ export async function POST(req) {
       );
     }
 
+    // Notify admin of the new submission
     try {
       const html = wrapEmail({
         heading: 'New Vendor Submission 📋',
@@ -88,6 +90,13 @@ export async function POST(req) {
       });
     } catch (emailErr) {
       console.error('Failed to send admin notification email', emailErr);
+    }
+
+    // Send confirmation email to the vendor
+    try {
+      await sendVendorSubmissionConfirmation(email, name);
+    } catch (vendorEmailErr) {
+      console.error('Failed to send vendor submission confirmation email', vendorEmailErr);
     }
 
     return new Response(JSON.stringify({ success: true, vendor: newVendor }), { status: 200 });

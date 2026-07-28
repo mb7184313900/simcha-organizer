@@ -43,6 +43,9 @@ export default function MagazineVendorsAdmin() {
   const [filterCategoryId, setFilterCategoryId] = useState('all')
   const [vendorSortMode, setVendorSortMode] = useState('alphabetical')
 
+  const [approvingId, setApprovingId] = useState(null)
+  const [rejectingId, setRejectingId] = useState(null)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -233,35 +236,63 @@ export default function MagazineVendorsAdmin() {
 
   const handleApprove = async (id, name) => {
     setErrorMsg(null)
+    setApprovingId(id)
 
-    const { error } = await supabase
-      .from('magazine_vendors')
-      .update({ status: 'active', is_published: true })
-      .eq('id', id)
+    try {
+      const res = await fetch('/api/admin/magazine/vendors/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
 
-    if (error) {
+      const result = await res.json()
+
+      if (!res.ok) {
+        setErrorMsg(result.error || `Failed to approve "${name}".`)
+      } else {
+        loadData()
+      }
+    } catch (err) {
       setErrorMsg(`Failed to approve "${name}".`)
-    } else {
-      loadData()
     }
+
+    setApprovingId(null)
   }
 
   const handleReject = async (id, name) => {
-    const confirmed = window.confirm(`Reject and remove the submission from "${name}"? This cannot be undone.`)
-    if (!confirmed) return
+    const reason = window.prompt(
+      `Why is "${name}"'s listing being rejected? This reason will be included in the email sent to them.`
+    )
+
+    // Admin clicked Cancel, or left it blank
+    if (reason === null) return
+    if (!reason.trim()) {
+      setErrorMsg('A rejection reason is required.')
+      return
+    }
 
     setErrorMsg(null)
+    setRejectingId(id)
 
-    const { error } = await supabase
-      .from('magazine_vendors')
-      .delete()
-      .eq('id', id)
+    try {
+      const res = await fetch('/api/admin/magazine/vendors/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, reason: reason.trim() }),
+      })
 
-    if (error) {
+      const result = await res.json()
+
+      if (!res.ok) {
+        setErrorMsg(result.error || `Failed to reject "${name}".`)
+      } else {
+        loadData()
+      }
+    } catch (err) {
       setErrorMsg(`Failed to reject "${name}".`)
-    } else {
-      loadData()
     }
+
+    setRejectingId(null)
   }
 
   const handleVendorSortModeChange = async (mode) => {
@@ -398,15 +429,17 @@ export default function MagazineVendorsAdmin() {
                     </button>
                     <button
                       onClick={() => handleApprove(vendor.id, vendor.name)}
-                      className="text-sm bg-[#141d33] text-white px-3 py-1.5 rounded-md hover:bg-[#1e2b4d]"
+                      disabled={approvingId === vendor.id}
+                      className="text-sm bg-[#141d33] text-white px-3 py-1.5 rounded-md hover:bg-[#1e2b4d] disabled:opacity-50"
                     >
-                      Approve
+                      {approvingId === vendor.id ? 'Approving...' : 'Approve'}
                     </button>
                     <button
                       onClick={() => handleReject(vendor.id, vendor.name)}
-                      className="text-sm text-red-500 hover:underline"
+                      disabled={rejectingId === vendor.id}
+                      className="text-sm text-red-500 hover:underline disabled:opacity-50"
                     >
-                      Reject
+                      {rejectingId === vendor.id ? 'Rejecting...' : 'Reject'}
                     </button>
                   </div>
                 </li>
