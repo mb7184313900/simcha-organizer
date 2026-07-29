@@ -10,6 +10,24 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const MIN_SUBMIT_SECONDS = 3;
+
+async function verifyTurnstile(token, remoteIp) {
+  if (!token) return false;
+
+  const params = new URLSearchParams();
+  params.append('secret', process.env.TURNSTILE_SECRET_KEY);
+  params.append('response', token);
+  if (remoteIp) params.append('remoteip', remoteIp);
+
+  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    body: params,
+  });
+  const data = await res.json();
+  return data.success === true;
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -25,7 +43,29 @@ export async function POST(req) {
       location,
       coupon_text,
       image,
+      honeypot,
+      formLoadedAt,
+      turnstileToken,
     } = body;
+
+    // Honeypot: real users never fill this hidden field. Pretend success so bots don't adapt.
+    if (honeypot) {
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }
+
+    // Time-trap: bots tend to submit near-instantly after loading the form.
+    if (formLoadedAt && Date.now() - formLoadedAt < MIN_SUBMIT_SECONDS * 1000) {
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }
+
+    const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const captchaValid = await verifyTurnstile(turnstileToken, remoteIp);
+    if (!captchaValid) {
+      return new Response(
+        JSON.stringify({ error: 'Verification failed. Please try again.' }),
+        { status: 400 }
+      );
+    }
 
     if (!name || !category_id || !email) {
       return new Response(

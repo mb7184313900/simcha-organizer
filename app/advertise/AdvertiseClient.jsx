@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import Script from 'next/script'
 import { supabase } from '../../lib/supabase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
@@ -34,6 +35,12 @@ export default function AdvertiseClient() {
   const [submitted, setSubmitted] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
+  // Spam protection: honeypot field, time-trap, and Turnstile captcha
+  const [honeypot, setHoneypot] = useState('')
+  const [formLoadedAt] = useState(() => Date.now())
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const turnstileContainerRef = useRef(null)
+
   useEffect(() => {
     const loadCategories = async () => {
       const { data, error } = await supabase
@@ -58,6 +65,11 @@ export default function AdvertiseClient() {
 
     if (!name.trim() || !categoryId || !email.trim()) {
       setErrorMessage('Please fill in Business Name, Category, and Email — these are required.')
+      return
+    }
+
+    if (!turnstileToken) {
+      setErrorMessage('Please complete the verification checkbox before submitting.')
       return
     }
 
@@ -101,6 +113,9 @@ export default function AdvertiseClient() {
           location: selectedLocations.join(', '),
           coupon_text: couponText,
           image: imageUrl,
+          honeypot,
+          formLoadedAt,
+          turnstileToken,
         }),
       })
 
@@ -139,6 +154,19 @@ export default function AdvertiseClient() {
 
   return (
     <main className="min-h-screen bg-[#FAF7F0] flex flex-col">
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          if (window.turnstile && turnstileContainerRef.current) {
+            window.turnstile.render(turnstileContainerRef.current, {
+              sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+              callback: (token) => setTurnstileToken(token),
+              'expired-callback': () => setTurnstileToken(''),
+            })
+          }
+        }}
+      />
       <Header />
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="bg-white p-8 rounded-lg shadow-sm border border-[#e8e0cc] w-full max-w-xl">
@@ -150,6 +178,18 @@ export default function AdvertiseClient() {
           </p>
 
           <div className="space-y-4">
+            {/* Honeypot field — hidden from real users, catches bots that fill every input */}
+            <input
+              type="text"
+              name="company_website_2"
+              value={honeypot}
+              onChange={e => setHoneypot(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}
+            />
+
             <input
               type="text"
               placeholder="Business Name *"
@@ -250,6 +290,8 @@ export default function AdvertiseClient() {
                 className="w-full text-sm text-[#5a5a5a]"
               />
             </div>
+
+            <div ref={turnstileContainerRef} />
 
             <button
               onClick={handleSubmit}
