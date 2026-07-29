@@ -57,6 +57,11 @@ export default function VendorClient() {
     return 'https://wa.me/' + digitsOnly
   }
 
+  const normalizeUrl = (url) => {
+    if (!url) return url
+    return /^https?:\/\//i.test(url) ? url : 'https://' + url
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#141d33]">
@@ -103,9 +108,9 @@ export default function VendorClient() {
 
                 {vendor.email && <a href={'mailto:' + vendor.email} className="inline-flex items-center justify-center gap-2 border border-[#141d33] text-[#141d33] px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">Email {vendor.email}</a>}
 
-                {vendor.website && <a href={vendor.website} target="_blank" rel="noopener noreferrer" onClick={() => trackStat(vendor.id, 'website')} className="inline-flex items-center justify-center gap-2 border border-[#141d33] text-[#141d33] px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">Visit Website</a>}
+                {vendor.website && <a href={normalizeUrl(vendor.website)} target="_blank" rel="noopener noreferrer" onClick={() => trackStat(vendor.id, 'website')} className="inline-flex items-center justify-center gap-2 border border-[#141d33] text-[#141d33] px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">Visit Website</a>}
 
-                {vendor.instagram && <a href={vendor.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 border border-[#141d33] text-[#141d33] px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">Follow on Instagram</a>}
+                {vendor.instagram && <a href={normalizeUrl(vendor.instagram)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 border border-[#141d33] text-[#141d33] px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">Follow on Instagram</a>}
 
                 {vendor.coupon_text && (
                   <div className="mt-2 border-2 border-dashed border-[#C9A227] rounded-lg p-4 text-center">
