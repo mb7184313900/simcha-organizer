@@ -1,10 +1,26 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 
 export default function HomeClient() {
   const [showBudgetPopup, setShowBudgetPopup] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user || null);
+    };
+    loadUser();
+  }, []);
+
+  const handleDashboardClick = () => {
+    router.push('/dashboard');
+  };
 
   return (
     <main className="min-h-screen bg-[#FAF7F0]">
@@ -28,7 +44,7 @@ export default function HomeClient() {
         </div>
       )}
 
-      <Header />
+      <Header user={user} onDashboardClick={handleDashboardClick} />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-[#141d33] to-[#1c2947] text-white text-center py-28 px-6">
