@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import Image from 'next/image';
 import Footer from '@/components/Footer';
+import Header from '@/components/Header';
 
 export default function HomeClient() {
   const [showBudgetPopup, setShowBudgetPopup] = useState(false);
@@ -28,25 +28,7 @@ export default function HomeClient() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-[#141d33] py-1.5 px-6 flex justify-between items-center sticky top-0 z-40 shadow-md border-b border-[#C9A227]/40">
-        <a href="/" className="flex items-center gap-3">
-          <Image
-            src="/images/logo.png"
-            alt="SimchaPro"
-            width={160}
-            height={230}
-            priority
-            className="h-16 w-auto"
-          />
-        </a>
-        <nav className="flex gap-8 text-sm font-medium tracking-wide">
-          <a href="/checklist" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Checklist</a>
-          <a href="/budget" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Expense Tracker</a>
-          <a href="/magazine" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Magazine</a>
-          <a href="/login" className="text-[#e8e4d8] hover:text-[#C9A227] transition-colors">Sign In</a>
-        </nav>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-[#141d33] to-[#1c2947] text-white text-center py-28 px-6">
