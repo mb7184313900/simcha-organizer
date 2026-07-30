@@ -970,41 +970,41 @@ export default function ExpenseTracker() {
             </div>
 
             {showAddVendor && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto overflow-x-hidden">
                 <div className="flex items-start justify-center min-h-full py-4 px-2">
-                  <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
+                  <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl overflow-x-hidden">
                     <h3 className="text-xl font-bold text-blue-900 mb-6">Add Vendor</h3>
                     <div className="space-y-3">
                       <input placeholder="Vendor name *" value={newVendor.name} onChange={e => setNewVendor(p => ({ ...p, name: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">Category *</label>
                         <div className="flex gap-2">
-                          <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <select value={newVendor.category} onChange={e => setNewVendor(p => ({ ...p, category: e.target.value }))} className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">Select category...</option>
                             {allCategories.map(c => <option key={c}>{c}</option>)}
                           </select>
-                          <button onClick={() => setShowAddCategory(!showAddCategory)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                          <button onClick={() => setShowAddCategory(!showAddCategory)} className="shrink-0 text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
                         </div>
                         {showAddCategory && (
                           <div className="flex gap-2 mt-2">
-                            <input placeholder="New category name" value={newCustomCategory} onChange={e => setNewCustomCategory(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <button onClick={addCustomCategory} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                            <input placeholder="New category name" value={newCustomCategory} onChange={e => setNewCustomCategory(e.target.value)} className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <button onClick={addCustomCategory} className="shrink-0 bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
                           </div>
                         )}
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">For *</label>
                         <div className="flex gap-2">
-                          <select value={newVendor.occasion} onChange={e => setNewVendor(p => ({ ...p, occasion: e.target.value }))} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <select value={newVendor.occasion} onChange={e => setNewVendor(p => ({ ...p, occasion: e.target.value }))} className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">Select occasion...</option>
                             {allOccasions.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <button onClick={() => setShowAddOccasion(!showAddOccasion)} className="text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
+                          <button onClick={() => setShowAddOccasion(!showAddOccasion)} className="shrink-0 text-blue-600 text-xs border border-blue-300 px-2 rounded-lg hover:bg-blue-50">+ New</button>
                         </div>
                         {showAddOccasion && (
                           <div className="flex gap-2 mt-2">
-                            <input placeholder="New occasion name" value={newCustomOccasion} onChange={e => setNewCustomOccasion(e.target.value)} className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <button onClick={addCustomOccasion} className="bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+                            <input placeholder="New occasion name" value={newCustomOccasion} onChange={e => setNewCustomOccasion(e.target.value)} className="flex-1 min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <button onClick={addCustomOccasion} className="shrink-0 bg-blue-900 text-white px-3 py-1 rounded-lg text-sm">Add</button>
                           </div>
                         )}
                       </div>
@@ -1026,12 +1026,12 @@ export default function ExpenseTracker() {
                       {newVendor.is_shared_expense && (
                         <div className="bg-blue-50 rounded-lg p-4 space-y-2">
                           <p className="text-sm font-semibold text-blue-900">Split %</p>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="min-w-0">
                               <label className="text-xs text-gray-500">{chossonName} %</label>
                               <input type="number" value={newVendor.split_chosson} onChange={e => setNewVendor(p => ({ ...p, split_chosson: parseFloat(e.target.value), split_kallah: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <label className="text-xs text-gray-500">{kallaName} %</label>
                               <input type="number" value={newVendor.split_kallah} onChange={e => setNewVendor(p => ({ ...p, split_kallah: parseFloat(e.target.value), split_chosson: 100 - parseFloat(e.target.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             </div>
@@ -1040,31 +1040,31 @@ export default function ExpenseTracker() {
                       )}
                       <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
                         <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payment (optional)</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input placeholder="Amount" type="number" value={newVendor.payment_amount} onChange={e => setNewVendor(p => ({ ...p, payment_amount: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                          <select value={newVendor.payment_paid_by || ''} onChange={e => setNewVendor(p => ({ ...p, payment_paid_by: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input placeholder="Amount" type="number" value={newVendor.payment_amount} onChange={e => setNewVendor(p => ({ ...p, payment_amount: e.target.value }))} className="min-w-0 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <select value={newVendor.payment_paid_by || ''} onChange={e => setNewVendor(p => ({ ...p, payment_paid_by: e.target.value }))} className="min-w-0 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">Who Paid? *</option>
                             <option>{chossonName}</option>
                             <option>{kallaName}</option>
                           </select>
-                          <select value={newVendor.payment_method} onChange={e => setNewVendor(p => ({ ...p, payment_method: e.target.value }))} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <select value={newVendor.payment_method} onChange={e => setNewVendor(p => ({ ...p, payment_method: e.target.value }))} className="min-w-0 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
                           </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="min-w-0">
                             <label className="text-xs text-gray-500 block mb-1">Due date</label>
-                            <input type="date" value={newVendor.payment_due_date} onChange={e => setNewVendor(p => ({ ...p, payment_due_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="date" value={newVendor.payment_due_date} onChange={e => setNewVendor(p => ({ ...p, payment_due_date: e.target.value }))} className="w-full min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <label className="text-xs text-gray-500 block mb-1">Date paid</label>
-                            <input type="date" value={newVendor.payment_paid_date} onChange={e => setNewVendor(p => ({ ...p, payment_paid_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="date" value={newVendor.payment_paid_date} onChange={e => setNewVendor(p => ({ ...p, payment_paid_date: e.target.value }))} className="w-full min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
                         </div>
                         {newVendor.payment_method === 'Check' && (
-                          <div>
+                          <div className="min-w-0">
                             <label className="text-xs text-gray-500 block mb-1">Check date</label>
-                            <input type="date" value={newVendor.payment_check_date} onChange={e => setNewVendor(p => ({ ...p, payment_check_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="date" value={newVendor.payment_check_date} onChange={e => setNewVendor(p => ({ ...p, payment_check_date: e.target.value }))} className="w-full min-w-0 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
                         )}
                       </div>
