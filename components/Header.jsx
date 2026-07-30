@@ -4,14 +4,14 @@ import Image from 'next/image';
 export default function Header({ user, onDashboardClick }) {
   return (
     <header className="bg-[#141d33] py-1.5 px-6 flex justify-between items-center sticky top-0 z-40 shadow-md border-b border-[#C9A227]/40">
-      <a href="/" className="flex items-center gap-3">
+      <a href="/" className="flex items-center gap-3 shrink-0">
         <Image
           src="/images/logo.png"
           alt="SimchaPro"
           width={160}
-          height={230}
-          priority
-          className="h-16 w-auto"
+          height={231}
+          preload
+          className="h-12 w-[33px] md:h-16 md:w-[44px]"
         />
       </a>
       <nav className="flex gap-8 text-sm font-medium tracking-wide items-center">
