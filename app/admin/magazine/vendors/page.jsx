@@ -11,6 +11,55 @@ import VendorDetailView from '../../../../components/VendorDetailView'
 
 const ADMIN_EMAIL = 'mb7184313900@gmail.com'
 
+function resolveCategoryName(vendor) {
+  if (vendor.category_id) {
+    return vendor.vendor_categories?.name || 'No category'
+  }
+  return vendor.custom_category_text || 'No category'
+}
+
+function couponSummary(text, expiration) {
+  if (!text) return ''
+  return expiration ? `${text} (expires ${expiration})` : text
+}
+
+// Builds the list of fields that differ between the live vendor row and a
+// pending edit request against it, for the admin's side-by-side comparison.
+function buildVendorDiff(original, pending) {
+  if (!original) return []
+
+  const rows = []
+  const addRow = (label, currentVal, requestedVal, isImage = false) => {
+    const currentNorm = (currentVal ?? '').toString().trim()
+    const requestedNorm = (requestedVal ?? '').toString().trim()
+    if (currentNorm === requestedNorm) return
+    rows.push({ label, current: currentVal, requested: requestedVal, isImage })
+  }
+
+  addRow('Name', original.name, pending.name)
+  addRow('Category', resolveCategoryName(original), resolveCategoryName(pending))
+  addRow('Phone', original.phone, pending.phone)
+  addRow('WhatsApp', original.whatsapp, pending.whatsapp)
+  addRow('Website', original.website, pending.website)
+  addRow('Instagram', original.instagram, pending.instagram)
+  addRow('Blurb', original.blurb, pending.blurb)
+  addRow('Location', original.location, pending.location)
+  addRow('Logo', original.thumbnail_image_url, pending.thumbnail_image_url, true)
+  addRow('Flyer', original.ad_image_url, pending.ad_image_url, true)
+  addRow(
+    'Regular Coupon',
+    couponSummary(original.regular_coupon_text, original.regular_coupon_expiration),
+    couponSummary(pending.regular_coupon_text, pending.regular_coupon_expiration)
+  )
+  addRow(
+    'Exclusive Coupon',
+    couponSummary(original.exclusive_coupon_text, original.exclusive_coupon_expiration),
+    couponSummary(pending.exclusive_coupon_text, pending.exclusive_coupon_expiration)
+  )
+
+  return rows
+}
+
 function emptyForm() {
   return {
     id: null,
@@ -20,6 +69,11 @@ function emptyForm() {
     whatsapp: '',
     website: '',
     blurb: '',
+    location: '',
+    regular_coupon_text: '',
+    regular_coupon_expiration: '',
+    exclusive_coupon_text: '',
+    exclusive_coupon_expiration: '',
     is_published: true,
     ad_image_url: '',
     thumbnail_image_url: '',
@@ -199,6 +253,11 @@ export default function MagazineVendorsAdmin() {
         whatsapp: form.whatsapp.trim(),
         website: form.website.trim(),
         blurb: form.blurb.trim(),
+        location: form.location.trim(),
+        regular_coupon_text: form.regular_coupon_text.trim() || null,
+        regular_coupon_expiration: form.regular_coupon_expiration || null,
+        exclusive_coupon_text: form.exclusive_coupon_text.trim() || null,
+        exclusive_coupon_expiration: form.exclusive_coupon_expiration || null,
         is_published: form.is_published,
         ad_image_url: adImageUrl,
         thumbnail_image_url: thumbImageUrl,
@@ -250,6 +309,11 @@ export default function MagazineVendorsAdmin() {
       whatsapp: vendor.whatsapp || '',
       website: vendor.website || '',
       blurb: vendor.blurb || '',
+      location: vendor.location || '',
+      regular_coupon_text: vendor.regular_coupon_text || '',
+      regular_coupon_expiration: vendor.regular_coupon_expiration || '',
+      exclusive_coupon_text: vendor.exclusive_coupon_text || '',
+      exclusive_coupon_expiration: vendor.exclusive_coupon_expiration || '',
       is_published: vendor.is_published,
       ad_image_url: vendor.ad_image_url || '',
       thumbnail_image_url: vendor.thumbnail_image_url || '',
@@ -310,6 +374,40 @@ export default function MagazineVendorsAdmin() {
     setApprovingId(null)
   }
 
+  // Edit requests overwrite the original vendor row instead of flipping status
+  // on the pending row itself; handled server-side so the confirmation email
+  // can be sent via Resend, same pattern as handleApprove/handleReject.
+  const handleApproveEditRequest = async (vendor) => {
+    setErrorMsg(null)
+    setApprovingId(vendor.id)
+
+    try {
+      const res = await fetch('/api/admin/magazine/vendors/approve-edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: vendor.id }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        setErrorMsg(result.error || `Failed to approve edit request for "${vendor.name}".`)
+      } else {
+        loadData()
+      }
+    } catch (err) {
+      setErrorMsg(`Failed to approve edit request for "${vendor.name}".`)
+    }
+
+    setApprovingId(null)
+  }
+
+  const finalizeApproval = (vendor) => {
+    return vendor.edit_of_vendor_id
+      ? handleApproveEditRequest(vendor)
+      : handleApprove(vendor.id, vendor.name)
+  }
+
   // Vendors that already picked a real category go straight through; vendors
   // that typed a custom category name need it resolved to a real category first.
   const handleApproveClick = (vendor) => {
@@ -317,7 +415,7 @@ export default function MagazineVendorsAdmin() {
       setCategoryPromptVendorId(vendor.id)
       return
     }
-    handleApprove(vendor.id, vendor.name)
+    finalizeApproval(vendor)
   }
 
   const handleAssignExistingCategory = async (vendor) => {
@@ -343,7 +441,7 @@ export default function MagazineVendorsAdmin() {
     }
 
     setCategoryPromptVendorId(null)
-    await handleApprove(vendor.id, vendor.name)
+    await finalizeApproval(vendor)
   }
 
   const handleCreateCategoryAndApprove = async (vendor) => {
@@ -386,7 +484,7 @@ export default function MagazineVendorsAdmin() {
     }
 
     setCategoryPromptVendorId(null)
-    await handleApprove(vendor.id, vendor.name)
+    await finalizeApproval(vendor)
   }
 
   const handleReject = async (id, name) => {
@@ -535,7 +633,13 @@ export default function MagazineVendorsAdmin() {
               </h2>
             </div>
             <ul>
-              {pendingVendors.map((vendor) => (
+              {pendingVendors.map((vendor) => {
+                const originalVendor = vendor.edit_of_vendor_id
+                  ? vendors.find((v) => v.id === vendor.edit_of_vendor_id)
+                  : null
+                const diffRows = originalVendor ? buildVendorDiff(originalVendor, vendor) : []
+
+                return (
                 <li
                   key={vendor.id}
                   className="px-6 py-4 border-b border-gray-50 last:border-0"
@@ -569,6 +673,17 @@ export default function MagazineVendorsAdmin() {
                         </div>
                       </div>
                       <div className="min-w-0">
+                        {vendor.edit_of_vendor_id && (
+                          originalVendor ? (
+                            <span className="inline-block bg-blue-100 text-blue-800 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full mb-1">
+                              Edit Request for: {originalVendor.name}
+                            </span>
+                          ) : (
+                            <span className="inline-block bg-red-100 text-red-700 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full mb-1">
+                              Edit Request (original vendor not found)
+                            </span>
+                          )
+                        )}
                         <p className="text-[#141d33] font-medium">{vendor.name}</p>
                         <p className="text-xs text-gray-500">
                           {vendor.category_id
@@ -679,8 +794,52 @@ export default function MagazineVendorsAdmin() {
                       </div>
                     </div>
                   )}
+
+                  {originalVendor && diffRows.length > 0 && (
+                    <div className="mt-3 border border-blue-200 rounded-md overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="bg-blue-50 text-gray-500">
+                            <th className="text-left px-3 py-2 font-medium">Field</th>
+                            <th className="text-left px-3 py-2 font-medium">Current</th>
+                            <th className="text-left px-3 py-2 font-medium">Requested</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {diffRows.map((row) => (
+                            <tr key={row.label} className="border-t border-gray-100">
+                              <td className="px-3 py-2 text-gray-500 align-top whitespace-nowrap">{row.label}</td>
+                              <td className="px-3 py-2 text-gray-700 align-top">
+                                {row.isImage ? (
+                                  row.current ? (
+                                    <img src={row.current} alt="" className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                  ) : (
+                                    <span className="text-gray-300 italic">None</span>
+                                  )
+                                ) : (
+                                  row.current || <span className="text-gray-300 italic">Empty</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-blue-900 font-medium align-top">
+                                {row.isImage ? (
+                                  row.requested ? (
+                                    <img src={row.requested} alt="" className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                  ) : (
+                                    <span className="text-gray-300 italic">None</span>
+                                  )
+                                ) : (
+                                  row.requested || <span className="text-gray-300 italic">Empty</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </li>
-              ))}
+                )
+              })}
             </ul>
           </div>
         )}
@@ -774,8 +933,59 @@ export default function MagazineVendorsAdmin() {
             </div>
 
             <div>
+              <label className="block text-sm text-gray-600 mb-1">Location</label>
+              <input
+                type="text"
+                value={form.location}
+                onChange={(e) => updateField('location', e.target.value)}
+                placeholder="e.g. Boro Park, Lakewood"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              />
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-700">Regular Coupon (visible to everyone)</p>
+              <input
+                type="text"
+                value={form.regular_coupon_text}
+                onChange={(e) => updateField('regular_coupon_text', e.target.value)}
+                placeholder="Coupon text"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              />
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Expiration date (optional)</label>
+                <input
+                  type="date"
+                  value={form.regular_coupon_expiration}
+                  onChange={(e) => updateField('regular_coupon_expiration', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-700">Exclusive Coupon (visible to paid SimchaPro members only)</p>
+              <input
+                type="text"
+                value={form.exclusive_coupon_text}
+                onChange={(e) => updateField('exclusive_coupon_text', e.target.value)}
+                placeholder="Coupon text"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              />
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Expiration date (optional)</label>
+                <input
+                  type="date"
+                  value={form.exclusive_coupon_expiration}
+                  onChange={(e) => updateField('exclusive_coupon_expiration', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm text-gray-600 mb-1">
-                Ad Image / Flyer (shown on vendor detail page)
+                Flyer (shown on vendor's detail page)
               </label>
               {form.ad_image_url && (
                 <img src={form.ad_image_url} alt="Current ad" className="h-24 rounded mb-2 border border-gray-200" />
@@ -790,7 +1000,7 @@ export default function MagazineVendorsAdmin() {
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                Thumbnail Image (shown on category browse cards)
+                Logo (shown on vendor's directory tile)
               </label>
               {form.thumbnail_image_url && (
                 <img src={form.thumbnail_image_url} alt="Current thumbnail" className="h-24 rounded mb-2 border border-gray-200" />

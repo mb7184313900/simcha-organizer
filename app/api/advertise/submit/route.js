@@ -80,6 +80,26 @@ export async function POST(req) {
       );
     }
 
+    // If an active vendor already exists with this email, treat this submission
+    // as an edit request against that vendor instead of a brand-new listing.
+    const { data: existingActiveVendors } = await supabase
+      .from('magazine_vendors')
+      .select('id')
+      .eq('status', 'active')
+      .ilike('email', email)
+      .limit(1);
+
+    const existingVendor = existingActiveVendors?.[0] || null;
+
+    if (existingVendor) {
+      // Don't let a re-submission pile up behind an unreviewed one — replace it.
+      await supabase
+        .from('magazine_vendors')
+        .delete()
+        .eq('edit_of_vendor_id', existingVendor.id)
+        .eq('status', 'pending');
+    }
+
     const { data: newVendor, error: insertError } = await supabase
       .from('magazine_vendors')
       .insert({
@@ -104,6 +124,7 @@ export async function POST(req) {
         is_published: false,
         is_self_submitted: true,
         amount_paid: 0,
+        edit_of_vendor_id: existingVendor ? existingVendor.id : null,
       })
       .select()
       .single();
@@ -118,11 +139,12 @@ export async function POST(req) {
 
     // Notify admin of the new submission
     try {
+      const isEditRequest = Boolean(existingVendor);
       const html = wrapEmail({
-        heading: 'New Vendor Submission 📋',
+        heading: isEditRequest ? 'Edit Request 📋' : 'New Vendor Submission 📋',
         bodyHtml: `
           <p style="font-size: 15px; line-height: 1.6;">
-            <strong>${name}</strong> just submitted a listing for the Simcha Magazine and is pending your approval.
+            <strong>${name}</strong> just ${isEditRequest ? 'requested changes to their existing listing' : 'submitted a listing'} for the Simcha Magazine and is pending your approval.
           </p>
           <p style="font-size: 15px; line-height: 1.6;">
             Email: <strong>${email}</strong>
@@ -136,7 +158,7 @@ export async function POST(req) {
       await resend.emails.send({
         from: 'SimchaPro <noreply@simchapro.com>',
         to: 'info@simchapro.com',
-        subject: `New Vendor Submission: ${name}`,
+        subject: isEditRequest ? `Edit Request: ${name}` : `New Vendor Submission: ${name}`,
         html,
       });
     } catch (emailErr) {
