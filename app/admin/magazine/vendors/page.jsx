@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import Footer from '../../../../components/Footer'
 import Link from 'next/link'
 import MagazineAdminNav from '../../../../components/MagazineAdminNav'
+import VendorTile from '../../../../components/VendorTile'
+import VendorDetailView from '../../../../components/VendorDetailView'
 
 const ADMIN_EMAIL = 'mb7184313900@gmail.com'
 
@@ -54,6 +56,8 @@ export default function MagazineVendorsAdmin() {
   const [categoryAssignments, setCategoryAssignments] = useState({})
   const [newCategoryNameByVendor, setNewCategoryNameByVendor] = useState({})
   const [assigningCategoryId, setAssigningCategoryId] = useState(null)
+
+  const [previewVendorId, setPreviewVendorId] = useState(null)
 
   const router = useRouter()
 
@@ -494,6 +498,14 @@ export default function MagazineVendorsAdmin() {
   const sortedVendors = displayedVendors()
   const canUseCustomArrows = vendorSortMode === 'custom' && filterCategoryId !== 'all'
 
+  const previewVendor = previewVendorId ? vendors.find(v => v.id === previewVendorId) : null
+  const previewDetailVendor = previewVendor && {
+    ...previewVendor,
+    vendor_categories: previewVendor.category_id
+      ? previewVendor.vendor_categories
+      : { name: previewVendor.custom_category_text || 'No category' },
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-10">
@@ -591,6 +603,12 @@ export default function MagazineVendorsAdmin() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
+                      <button
+                        onClick={() => setPreviewVendorId(vendor.id)}
+                        className="text-sm text-gray-500 hover:text-[#141d33] hover:underline"
+                      >
+                        Preview
+                      </button>
                       <button
                         onClick={() => startEdit(vendor)}
                         className="text-sm text-[#C9A227] hover:underline"
@@ -952,6 +970,55 @@ export default function MagazineVendorsAdmin() {
           )}
         </div>
       </div>
+
+      {previewVendor && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto"
+          onClick={() => setPreviewVendorId(null)}
+        >
+          <div className="flex items-start justify-center min-h-full py-8 px-4">
+            <div
+              className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-[#141d33]">Listing Preview</h3>
+                <button
+                  type="button"
+                  onClick={() => setPreviewVendorId(null)}
+                  aria-label="Close preview"
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Directory tile</p>
+                  <div className="max-w-xs pointer-events-none">
+                    <VendorTile vendor={previewVendor} href="#" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Full listing page</p>
+                  <VendorDetailView vendor={previewDetailVendor} />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewVendorId(null)}
+                className="mt-6 w-full border border-gray-300 text-gray-600 py-2 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   )

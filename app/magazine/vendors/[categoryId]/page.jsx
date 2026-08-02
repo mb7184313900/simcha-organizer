@@ -5,6 +5,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Header from '../../../../components/Header'
 import Footer from '../../../../components/Footer'
+import VendorTile from '../../../../components/VendorTile'
 import Link from 'next/link'
 
 export default function CategoryVendorsPage() {
@@ -90,26 +91,11 @@ export default function CategoryVendorsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {vendors.map((vendor) => (
-              <Link
+              <VendorTile
                 key={vendor.id}
+                vendor={vendor}
                 href={`/magazine/vendors/${params.categoryId}/${vendor.id}`}
-                className="group bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all"
-              >
-                {vendor.thumbnail_image_url ? (
-                  <img
-                    src={vendor.thumbnail_image_url}
-                    alt={vendor.name}
-                    className="w-full h-40 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-40 bg-gray-100" />
-                )}
-                <div className="p-5">
-                  <h2 className="text-lg font-serif text-[#141d33] group-hover:text-[#C9A227] transition-colors">
-                    {vendor.name}
-                  </h2>
-                </div>
-              </Link>
+              />
             ))}
           </div>
         )}

@@ -1,9 +1,11 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Script from 'next/script'
 import { supabase } from '../../lib/supabase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
+import VendorTile from '../../components/VendorTile'
+import VendorDetailView from '../../components/VendorDetailView'
 
 const LOCATIONS = [
   'Boro Park',
@@ -43,6 +45,7 @@ export default function AdvertiseClient() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
 
   // Spam protection: honeypot field, time-trap, and Turnstile captcha
   const [honeypot, setHoneypot] = useState('')
@@ -62,6 +65,22 @@ export default function AdvertiseClient() {
     }
     loadCategories()
   }, [])
+
+  // Local object URLs so the preview can show the logo/flyer before they're uploaded
+  const logoPreviewUrl = useMemo(() => (logoFile ? URL.createObjectURL(logoFile) : null), [logoFile])
+  const flyerPreviewUrl = useMemo(() => (flyerFile ? URL.createObjectURL(flyerFile) : null), [flyerFile])
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl)
+    }
+  }, [logoPreviewUrl])
+
+  useEffect(() => {
+    return () => {
+      if (flyerPreviewUrl) URL.revokeObjectURL(flyerPreviewUrl)
+    }
+  }, [flyerPreviewUrl])
 
   const toggleLocation = (loc) => {
     setSelectedLocations(prev =>
@@ -194,6 +213,38 @@ export default function AdvertiseClient() {
     }
 
     setLoading(false)
+  }
+
+  // Preview reflects whatever's currently in the form, blanks and all — no validation
+  const previewCategoryName = customCategoryText.trim()
+    ? customCategoryText.trim()
+    : (categories.find(c => c.id === categoryId)?.name || '')
+
+  const previewLocation = [...selectedLocations, ...customLocations].join(', ')
+
+  const previewTileVendor = {
+    name: name || 'Your Business Name',
+    thumbnail_image_url: logoPreviewUrl,
+    regular_coupon_text: regularCouponText,
+    regular_coupon_expiration: regularCouponExpiration,
+  }
+
+  const previewDetailVendor = {
+    id: 'preview',
+    name: name || 'Your Business Name',
+    vendor_categories: { name: previewCategoryName },
+    blurb,
+    location: previewLocation,
+    phone,
+    whatsapp,
+    email,
+    website,
+    instagram,
+    ad_image_url: flyerPreviewUrl,
+    regular_coupon_text: regularCouponText,
+    regular_coupon_expiration: regularCouponExpiration,
+    exclusive_coupon_text: exclusiveCouponText,
+    exclusive_coupon_expiration: exclusiveCouponExpiration,
   }
 
   if (submitted) {
@@ -469,6 +520,14 @@ export default function AdvertiseClient() {
             <div ref={turnstileContainerRef} />
 
             <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className="w-full border border-[#141d33] text-[#141d33] py-3 rounded-md font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Preview Listing
+            </button>
+
+            <button
               onClick={handleSubmit}
               disabled={loading}
               className="w-full bg-[#141d33] text-white py-3 rounded-md font-semibold hover:bg-[#1e2a4a] transition-colors disabled:opacity-50"
@@ -480,6 +539,59 @@ export default function AdvertiseClient() {
           {errorMessage && <p className="mt-4 text-center text-sm text-red-600">{errorMessage}</p>}
         </div>
       </div>
+
+      {showPreview && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto"
+          onClick={() => setShowPreview(false)}
+        >
+          <div className="flex items-start justify-center min-h-full py-8 px-4">
+            <div
+              className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-[#141d33]">Listing Preview</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  aria-label="Close preview"
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                    How your tile will look in the category directory
+                  </p>
+                  <div className="max-w-xs pointer-events-none">
+                    <VendorTile vendor={previewTileVendor} href="#" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">
+                    How your full listing will look
+                  </p>
+                  <VendorDetailView vendor={previewDetailVendor} />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="mt-6 w-full border border-gray-300 text-gray-600 py-2 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </main>
   )
