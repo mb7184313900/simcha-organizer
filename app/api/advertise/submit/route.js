@@ -34,6 +34,7 @@ export async function POST(req) {
     const {
       name,
       category_id,
+      customCategoryText,
       phone,
       whatsapp,
       email,
@@ -41,8 +42,13 @@ export async function POST(req) {
       instagram,
       blurb,
       location,
-      coupon_text,
-      image,
+      logoUrl,
+      flyerUrl,
+      regularCouponText,
+      regularCouponExpiration,
+      exclusiveCouponText,
+      exclusiveCouponExpiration,
+      vendorNoteToAdmin,
       honeypot,
       formLoadedAt,
       turnstileToken,
@@ -67,7 +73,7 @@ export async function POST(req) {
       );
     }
 
-    if (!name || !category_id || !email) {
+    if (!name || !email || (!category_id && !customCategoryText)) {
       return new Response(
         JSON.stringify({ error: 'Business Name, Category, and Email are required.' }),
         { status: 400 }
@@ -78,7 +84,8 @@ export async function POST(req) {
       .from('magazine_vendors')
       .insert({
         name,
-        category_id,
+        category_id: customCategoryText ? null : category_id,
+        custom_category_text: customCategoryText || null,
         phone: phone || null,
         whatsapp: whatsapp || null,
         email,
@@ -86,9 +93,13 @@ export async function POST(req) {
         instagram: instagram || null,
         blurb: blurb || null,
         location: location || null,
-        coupon_text: coupon_text || null,
-        ad_image_url: image || null,
-        thumbnail_image_url: image || null,
+        ad_image_url: flyerUrl || null,
+        thumbnail_image_url: logoUrl || null,
+        regular_coupon_text: regularCouponText || null,
+        regular_coupon_expiration: regularCouponExpiration || null,
+        exclusive_coupon_text: exclusiveCouponText || null,
+        exclusive_coupon_expiration: exclusiveCouponExpiration || null,
+        vendor_note_to_admin: vendorNoteToAdmin || null,
         status: 'pending',
         is_published: false,
         is_self_submitted: true,

@@ -22,6 +22,8 @@ export default function AdvertiseClient() {
   const [categories, setCategories] = useState([])
   const [name, setName] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [showCustomCategory, setShowCustomCategory] = useState(false)
+  const [customCategoryText, setCustomCategoryText] = useState('')
   const [phone, setPhone] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
@@ -29,8 +31,15 @@ export default function AdvertiseClient() {
   const [instagram, setInstagram] = useState('')
   const [blurb, setBlurb] = useState('')
   const [selectedLocations, setSelectedLocations] = useState([])
-  const [couponText, setCouponText] = useState('')
-  const [photoFile, setPhotoFile] = useState(null)
+  const [customLocations, setCustomLocations] = useState([])
+  const [newCustomLocation, setNewCustomLocation] = useState('')
+  const [logoFile, setLogoFile] = useState(null)
+  const [flyerFile, setFlyerFile] = useState(null)
+  const [regularCouponText, setRegularCouponText] = useState('')
+  const [regularCouponExpiration, setRegularCouponExpiration] = useState('')
+  const [exclusiveCouponText, setExclusiveCouponText] = useState('')
+  const [exclusiveCouponExpiration, setExclusiveCouponExpiration] = useState('')
+  const [vendorNoteToAdmin, setVendorNoteToAdmin] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -60,10 +69,55 @@ export default function AdvertiseClient() {
     )
   }
 
+  const addCustomLocation = () => {
+    const trimmed = newCustomLocation.trim()
+    if (!trimmed) return
+    setCustomLocations(prev => [...prev, trimmed])
+    setNewCustomLocation('')
+  }
+
+  const removeCustomLocation = (index) => {
+    setCustomLocations(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleCategorySelect = (value) => {
+    setCategoryId(value)
+    if (value) {
+      setCustomCategoryText('')
+    }
+  }
+
+  const handleCustomCategoryChange = (value) => {
+    setCustomCategoryText(value)
+    if (value) {
+      setCategoryId('')
+    }
+  }
+
+  const uploadToVendorUploads = async (file) => {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+    const { error: uploadError } = await supabase.storage
+      .from('vendor-uploads')
+      .upload(fileName, file)
+
+    if (uploadError) {
+      throw uploadError
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('vendor-uploads')
+      .getPublicUrl(fileName)
+
+    return publicUrlData.publicUrl
+  }
+
   const handleSubmit = async () => {
     setErrorMessage('')
 
-    if (!name.trim() || !categoryId || !email.trim()) {
+    const hasCustomCategory = customCategoryText.trim().length > 0
+
+    if (!name.trim() || (!categoryId && !hasCustomCategory) || !email.trim()) {
       setErrorMessage('Please fill in Business Name, Category, and Email — these are required.')
       return
     }
@@ -75,27 +129,28 @@ export default function AdvertiseClient() {
 
     setLoading(true)
 
-    let imageUrl = null
+    let logoUrl = null
+    let flyerUrl = null
 
     try {
-      if (photoFile) {
-        const fileExt = photoFile.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-        const { error: uploadError } = await supabase.storage
-          .from('vendor-uploads')
-          .upload(fileName, photoFile)
-
-        if (uploadError) {
-          setErrorMessage('There was a problem uploading your photo. Please try again.')
+      if (logoFile) {
+        try {
+          logoUrl = await uploadToVendorUploads(logoFile)
+        } catch (uploadError) {
+          setErrorMessage('There was a problem uploading your logo. Please try again.')
           setLoading(false)
           return
         }
+      }
 
-        const { data: publicUrlData } = supabase.storage
-          .from('vendor-uploads')
-          .getPublicUrl(fileName)
-
-        imageUrl = publicUrlData.publicUrl
+      if (flyerFile) {
+        try {
+          flyerUrl = await uploadToVendorUploads(flyerFile)
+        } catch (uploadError) {
+          setErrorMessage('There was a problem uploading your flyer. Please try again.')
+          setLoading(false)
+          return
+        }
       }
 
       const response = await fetch('/api/advertise/submit', {
@@ -103,16 +158,22 @@ export default function AdvertiseClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          category_id: categoryId,
+          category_id: hasCustomCategory ? null : categoryId,
+          customCategoryText: hasCustomCategory ? customCategoryText.trim() : null,
           phone,
           whatsapp,
           email,
           website,
           instagram,
           blurb,
-          location: selectedLocations.join(', '),
-          coupon_text: couponText,
-          image: imageUrl,
+          location: [...selectedLocations, ...customLocations].join(', '),
+          logoUrl,
+          flyerUrl,
+          regularCouponText,
+          regularCouponExpiration: regularCouponExpiration || null,
+          exclusiveCouponText,
+          exclusiveCouponExpiration: exclusiveCouponExpiration || null,
+          vendorNoteToAdmin,
           honeypot,
           formLoadedAt,
           turnstileToken,
@@ -198,16 +259,36 @@ export default function AdvertiseClient() {
               className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
             />
 
-            <select
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227] text-[#141d33]"
-            >
-              <option value="">Category *</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <div>
+              <select
+                value={categoryId}
+                onChange={e => handleCategorySelect(e.target.value)}
+                className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227] text-[#141d33]"
+              >
+                <option value="">Category *</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setShowCustomCategory(v => !v)}
+                className="mt-2 text-sm text-[#141d33] underline hover:text-[#C9A227] transition-colors"
+              >
+                Don't see your category? Add your own
+              </button>
+
+              {showCustomCategory && (
+                <input
+                  type="text"
+                  placeholder="Enter your category"
+                  value={customCategoryText}
+                  onChange={e => handleCustomCategoryChange(e.target.value)}
+                  className="mt-2 w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              )}
+            </div>
 
             <input
               type="text"
@@ -271,22 +352,116 @@ export default function AdvertiseClient() {
                   </label>
                 ))}
               </div>
+
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  placeholder="Add custom location"
+                  value={newCustomLocation}
+                  onChange={e => setNewCustomLocation(e.target.value)}
+                  className="flex-1 min-w-0 border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+                <button
+                  type="button"
+                  onClick={addCustomLocation}
+                  className="shrink-0 bg-[#141d33] text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-[#1e2a4a] transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+
+              {customLocations.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {customLocations.map((loc, index) => (
+                    <span
+                      key={`${loc}-${index}`}
+                      className="inline-flex items-center gap-2 bg-[#141d33]/5 text-[#141d33] text-sm px-3 py-1 rounded-full border border-[#141d33]/10"
+                    >
+                      {loc}
+                      <button
+                        type="button"
+                        onClick={() => removeCustomLocation(index)}
+                        aria-label={`Remove ${loc}`}
+                        className="text-[#5a5a5a] hover:text-red-600"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <input
-              type="text"
-              placeholder="Optional Coupon for SimchaPro Members"
-              value={couponText}
-              onChange={e => setCouponText(e.target.value)}
-              className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-            />
+            <div className="border border-gray-200 rounded-md p-4 space-y-2">
+              <p className="text-sm font-semibold text-[#141d33]">Regular Coupon (visible to everyone)</p>
+              <input
+                type="text"
+                placeholder="Coupon text"
+                value={regularCouponText}
+                onChange={e => setRegularCouponText(e.target.value)}
+                className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+              />
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Expiration date (optional)</label>
+                <input
+                  type="date"
+                  value={regularCouponExpiration}
+                  onChange={e => setRegularCouponExpiration(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-md p-4 space-y-2">
+              <p className="text-sm font-semibold text-[#141d33]">Exclusive Coupon (visible to paid SimchaPro members only)</p>
+              <p className="text-xs text-[#5a5a5a]">
+                This coupon text will never be shown publicly — only a note that an exclusive offer exists.
+              </p>
+              <input
+                type="text"
+                placeholder="Coupon text"
+                value={exclusiveCouponText}
+                onChange={e => setExclusiveCouponText(e.target.value)}
+                className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+              />
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Expiration date (optional)</label>
+                <input
+                  type="date"
+                  value={exclusiveCouponExpiration}
+                  onChange={e => setExclusiveCouponExpiration(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+            </div>
 
             <div>
-              <label className="block text-sm text-[#5a5a5a] mb-1">Photo or Flyer (optional)</label>
+              <label className="block text-sm text-[#5a5a5a] mb-1">Anything you'd like us to know? (optional)</label>
+              <textarea
+                placeholder="Special instructions, questions, or context for our team"
+                value={vendorNoteToAdmin}
+                onChange={e => setVendorNoteToAdmin(e.target.value)}
+                rows={2}
+                className="w-full border border-gray-200 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-[#5a5a5a] mb-1">Logo (shown on your directory tile)</label>
               <input
                 type="file"
                 accept="image/*"
-                onChange={e => setPhotoFile(e.target.files[0])}
+                onChange={e => setLogoFile(e.target.files[0])}
+                className="w-full text-sm text-[#5a5a5a]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-[#5a5a5a] mb-1">Flyer or Ad Image (shown on your detail page)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => setFlyerFile(e.target.files[0])}
                 className="w-full text-sm text-[#5a5a5a]"
               />
             </div>

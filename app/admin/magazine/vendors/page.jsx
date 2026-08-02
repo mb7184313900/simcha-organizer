@@ -21,6 +21,8 @@ function emptyForm() {
     is_published: true,
     ad_image_url: '',
     thumbnail_image_url: '',
+    admin_note: '',
+    custom_category_text: '',
   }
 }
 
@@ -45,6 +47,13 @@ export default function MagazineVendorsAdmin() {
 
   const [approvingId, setApprovingId] = useState(null)
   const [rejectingId, setRejectingId] = useState(null)
+
+  // Custom-category assignment (pending vendors that submitted a category name
+  // instead of picking one from the dropdown)
+  const [categoryPromptVendorId, setCategoryPromptVendorId] = useState(null)
+  const [categoryAssignments, setCategoryAssignments] = useState({})
+  const [newCategoryNameByVendor, setNewCategoryNameByVendor] = useState({})
+  const [assigningCategoryId, setAssigningCategoryId] = useState(null)
 
   const router = useRouter()
 
@@ -121,7 +130,10 @@ export default function MagazineVendorsAdmin() {
       setErrorMsg('Vendor name is required.')
       return
     }
-    if (!form.category_id) {
+
+    const typedCustomCategory = form.category_id ? '' : form.custom_category_text.trim()
+
+    if (!form.category_id && !typedCustomCategory) {
       setErrorMsg('Please choose a category.')
       return
     }
@@ -130,6 +142,37 @@ export default function MagazineVendorsAdmin() {
     setErrorMsg(null)
 
     try {
+      let resolvedCategoryId = form.category_id
+
+      // Confirmed/edited custom category text: match it to an existing category
+      // by name, or create a new one, then use that category going forward.
+      if (!resolvedCategoryId && typedCustomCategory) {
+        const existingMatch = categories.find(
+          (c) => c.name.toLowerCase() === typedCustomCategory.toLowerCase()
+        )
+
+        if (existingMatch) {
+          resolvedCategoryId = existingMatch.id
+        } else {
+          const nextSortOrder = categories.length > 0
+            ? Math.max(...categories.map(c => c.sort_order || 0)) + 1
+            : 1
+
+          const { data: newCategory, error: categoryError } = await supabase
+            .from('vendor_categories')
+            .insert({ name: typedCustomCategory, sort_order: nextSortOrder })
+            .select()
+            .single()
+
+          if (categoryError || !newCategory) {
+            setErrorMsg('Failed to create the new category.')
+            setSaving(false)
+            return
+          }
+          resolvedCategoryId = newCategory.id
+        }
+      }
+
       let adImageUrl = form.ad_image_url
       let thumbImageUrl = form.thumbnail_image_url
 
@@ -146,7 +189,8 @@ export default function MagazineVendorsAdmin() {
 
       const payload = {
         name: form.name.trim(),
-        category_id: form.category_id,
+        category_id: resolvedCategoryId,
+        custom_category_text: null,
         phone: form.phone.trim(),
         whatsapp: form.whatsapp.trim(),
         website: form.website.trim(),
@@ -154,6 +198,7 @@ export default function MagazineVendorsAdmin() {
         is_published: form.is_published,
         ad_image_url: adImageUrl,
         thumbnail_image_url: thumbImageUrl,
+        admin_note: form.admin_note.trim(),
       }
 
       let error
@@ -165,7 +210,7 @@ export default function MagazineVendorsAdmin() {
         error = updateError
       } else {
         // New vendors go to the end of their category's custom order
-        const categoryVendors = vendors.filter(v => v.category_id === form.category_id)
+        const categoryVendors = vendors.filter(v => v.category_id === resolvedCategoryId)
         const nextSortOrder = categoryVendors.length > 0
           ? Math.max(...categoryVendors.map(v => v.sort_order || 0)) + 1
           : 1
@@ -204,6 +249,8 @@ export default function MagazineVendorsAdmin() {
       is_published: vendor.is_published,
       ad_image_url: vendor.ad_image_url || '',
       thumbnail_image_url: vendor.thumbnail_image_url || '',
+      admin_note: vendor.admin_note || '',
+      custom_category_text: vendor.custom_category_text || '',
     })
     setAdImageFile(null)
     setThumbImageFile(null)
@@ -257,6 +304,85 @@ export default function MagazineVendorsAdmin() {
     }
 
     setApprovingId(null)
+  }
+
+  // Vendors that already picked a real category go straight through; vendors
+  // that typed a custom category name need it resolved to a real category first.
+  const handleApproveClick = (vendor) => {
+    if (!vendor.category_id && vendor.custom_category_text) {
+      setCategoryPromptVendorId(vendor.id)
+      return
+    }
+    handleApprove(vendor.id, vendor.name)
+  }
+
+  const handleAssignExistingCategory = async (vendor) => {
+    const selectedCategoryId = categoryAssignments[vendor.id]
+    if (!selectedCategoryId) {
+      setErrorMsg('Please choose a category to assign.')
+      return
+    }
+
+    setErrorMsg(null)
+    setAssigningCategoryId(vendor.id)
+
+    const { error } = await supabase
+      .from('magazine_vendors')
+      .update({ category_id: selectedCategoryId, custom_category_text: null })
+      .eq('id', vendor.id)
+
+    setAssigningCategoryId(null)
+
+    if (error) {
+      setErrorMsg(`Failed to assign a category for "${vendor.name}".`)
+      return
+    }
+
+    setCategoryPromptVendorId(null)
+    await handleApprove(vendor.id, vendor.name)
+  }
+
+  const handleCreateCategoryAndApprove = async (vendor) => {
+    const categoryName = (newCategoryNameByVendor[vendor.id] ?? vendor.custom_category_text ?? '').trim()
+
+    if (!categoryName) {
+      setErrorMsg('Please enter a category name.')
+      return
+    }
+
+    setErrorMsg(null)
+    setAssigningCategoryId(vendor.id)
+
+    const nextSortOrder = categories.length > 0
+      ? Math.max(...categories.map(c => c.sort_order || 0)) + 1
+      : 1
+
+    const { data: newCategory, error: categoryError } = await supabase
+      .from('vendor_categories')
+      .insert({ name: categoryName, sort_order: nextSortOrder })
+      .select()
+      .single()
+
+    if (categoryError || !newCategory) {
+      setErrorMsg(`Failed to create category for "${vendor.name}".`)
+      setAssigningCategoryId(null)
+      return
+    }
+
+    const { error: updateError } = await supabase
+      .from('magazine_vendors')
+      .update({ category_id: newCategory.id, custom_category_text: null })
+      .eq('id', vendor.id)
+
+    setAssigningCategoryId(null)
+
+    if (updateError) {
+      setErrorMsg(`Failed to assign the new category for "${vendor.name}".`)
+      return
+    }
+
+    setCategoryPromptVendorId(null)
+    await handleApprove(vendor.id, vendor.name)
   }
 
   const handleReject = async (id, name) => {
@@ -400,48 +526,141 @@ export default function MagazineVendorsAdmin() {
               {pendingVendors.map((vendor) => (
                 <li
                   key={vendor.id}
-                  className="px-6 py-4 border-b border-gray-50 last:border-0 flex items-center justify-between"
+                  className="px-6 py-4 border-b border-gray-50 last:border-0"
                 >
-                  <div className="flex items-center gap-4">
-                    {vendor.thumbnail_image_url ? (
-                      <img
-                        src={vendor.thumbnail_image_url}
-                        alt={vendor.name}
-                        className="w-12 h-12 rounded object-cover border border-gray-200"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded bg-gray-100 border border-gray-200" />
-                    )}
-                    <div>
-                      <p className="text-[#141d33] font-medium">{vendor.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {vendor.vendor_categories?.name || 'No category'}
-                        {vendor.email && ` · ${vendor.email}`}
-                      </p>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                      <div className="flex gap-2 shrink-0">
+                        <div className="text-center">
+                          <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Logo</p>
+                          {vendor.thumbnail_image_url ? (
+                            <img
+                              src={vendor.thumbnail_image_url}
+                              alt={`${vendor.name} logo`}
+                              className="w-12 h-12 rounded object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-gray-100 border border-gray-200" />
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Flyer</p>
+                          {vendor.ad_image_url ? (
+                            <img
+                              src={vendor.ad_image_url}
+                              alt={`${vendor.name} flyer`}
+                              className="w-12 h-12 rounded object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-gray-100 border border-gray-200" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[#141d33] font-medium">{vendor.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {vendor.category_id
+                            ? (vendor.vendor_categories?.name || 'No category')
+                            : vendor.custom_category_text
+                              ? `Custom category: ${vendor.custom_category_text}`
+                              : 'No category'}
+                          {vendor.email && ` · ${vendor.email}`}
+                        </p>
+                        {vendor.location && (
+                          <p className="text-xs text-gray-400 mt-1">📍 {vendor.location}</p>
+                        )}
+                        {vendor.regular_coupon_text && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Regular coupon: {vendor.regular_coupon_text}
+                            {vendor.regular_coupon_expiration && ` (expires ${vendor.regular_coupon_expiration})`}
+                          </p>
+                        )}
+                        {vendor.exclusive_coupon_text && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Exclusive coupon: {vendor.exclusive_coupon_text}
+                            {vendor.exclusive_coupon_expiration && ` (expires ${vendor.exclusive_coupon_expiration})`}
+                          </p>
+                        )}
+                        {vendor.vendor_note_to_admin && (
+                          <div className="mt-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-2">
+                            <p className="text-xs text-blue-900">
+                              <span className="font-semibold">Vendor's note:</span> {vendor.vendor_note_to_admin}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <button
+                        onClick={() => startEdit(vendor)}
+                        className="text-sm text-[#C9A227] hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleApproveClick(vendor)}
+                        disabled={approvingId === vendor.id}
+                        className="text-sm bg-[#141d33] text-white px-3 py-1.5 rounded-md hover:bg-[#1e2b4d] disabled:opacity-50"
+                      >
+                        {approvingId === vendor.id ? 'Approving...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleReject(vendor.id, vendor.name)}
+                        disabled={rejectingId === vendor.id}
+                        className="text-sm text-red-500 hover:underline disabled:opacity-50"
+                      >
+                        {rejectingId === vendor.id ? 'Rejecting...' : 'Reject'}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => startEdit(vendor)}
-                      className="text-sm text-[#C9A227] hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleApprove(vendor.id, vendor.name)}
-                      disabled={approvingId === vendor.id}
-                      className="text-sm bg-[#141d33] text-white px-3 py-1.5 rounded-md hover:bg-[#1e2b4d] disabled:opacity-50"
-                    >
-                      {approvingId === vendor.id ? 'Approving...' : 'Approve'}
-                    </button>
-                    <button
-                      onClick={() => handleReject(vendor.id, vendor.name)}
-                      disabled={rejectingId === vendor.id}
-                      className="text-sm text-red-500 hover:underline disabled:opacity-50"
-                    >
-                      {rejectingId === vendor.id ? 'Rejecting...' : 'Reject'}
-                    </button>
-                  </div>
+
+                  {categoryPromptVendorId === vendor.id && (
+                    <div className="mt-3 bg-[#fdf7e7] border border-[#C9A227]/40 rounded-md p-3 space-y-2">
+                      <p className="text-xs text-gray-600">
+                        This vendor submitted a custom category (<strong>{vendor.custom_category_text}</strong>). Assign a real category before approving.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={categoryAssignments[vendor.id] || ''}
+                          onChange={(e) => setCategoryAssignments(prev => ({ ...prev, [vendor.id]: e.target.value }))}
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs"
+                        >
+                          <option value="">Assign to existing category...</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleAssignExistingCategory(vendor)}
+                          disabled={!categoryAssignments[vendor.id] || assigningCategoryId === vendor.id}
+                          className="text-xs bg-[#141d33] text-white px-3 py-1.5 rounded-md hover:bg-[#1e2b4d] disabled:opacity-50"
+                        >
+                          {assigningCategoryId === vendor.id ? 'Assigning...' : 'Assign & Approve'}
+                        </button>
+                        <span className="text-xs text-gray-400">or</span>
+                        <input
+                          type="text"
+                          value={newCategoryNameByVendor[vendor.id] ?? vendor.custom_category_text ?? ''}
+                          onChange={(e) => setNewCategoryNameByVendor(prev => ({ ...prev, [vendor.id]: e.target.value }))}
+                          placeholder="New category name"
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-xs min-w-0"
+                        />
+                        <button
+                          onClick={() => handleCreateCategoryAndApprove(vendor)}
+                          disabled={assigningCategoryId === vendor.id || !(newCategoryNameByVendor[vendor.id] ?? vendor.custom_category_text ?? '').trim()}
+                          className="text-xs border border-blue-300 text-blue-600 px-3 py-1.5 rounded-md hover:bg-blue-50 disabled:opacity-50 shrink-0"
+                        >
+                          {assigningCategoryId === vendor.id ? 'Creating...' : 'Create & Approve'}
+                        </button>
+                        <button
+                          onClick={() => setCategoryPromptVendorId(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -477,6 +696,20 @@ export default function MagazineVendorsAdmin() {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+
+              {!form.category_id && form.custom_category_text && (
+                <div className="mt-2">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    This vendor submitted a custom category. Confirm or edit the name below — it will be matched to an existing category of this name, or created as new, when you save.
+                  </label>
+                  <input
+                    type="text"
+                    value={form.custom_category_text}
+                    onChange={(e) => updateField('custom_category_text', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -562,6 +795,18 @@ export default function MagazineVendorsAdmin() {
               <label htmlFor="is_published" className="text-sm text-gray-600">
                 Published (visible to users)
               </label>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Note to SimchaPro Admin — not shown publicly
+              </label>
+              <textarea
+                value={form.admin_note}
+                onChange={(e) => updateField('admin_note', e.target.value)}
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-yellow-50 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              />
             </div>
 
             <div className="flex gap-3 pt-2">
