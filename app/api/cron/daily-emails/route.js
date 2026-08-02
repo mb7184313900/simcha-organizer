@@ -1,12 +1,30 @@
+import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
+import { wrapEmail } from '../../../../lib/email/templates'
 import { sendTrialWarning } from '../../../../lib/email/sendTrialWarning'
 import { sendExpiryReminder } from '../../../../lib/email/sendExpiryReminder'
 import { sendSideBDigest } from '../../../../lib/email/sendSideBDigest'
+import { sendCouponExpirationReminder } from '../../../../lib/email/sendCouponExpirationReminder'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+// Coupon expiration reminders only look at vendor-submitted coupons on
+// magazine_vendors, not the separately-managed `coupons` table.
+const COUPON_REMINDER_WINDOW_DAYS = 7
+
+function isExpiringSoon(expirationDateStr, now, windowDays) {
+  if (!expirationDateStr) return false
+  const expiration = new Date(`${expirationDateStr}T23:59:59`)
+  const msUntil = expiration.getTime() - now.getTime()
+  if (msUntil < 0) return false // already expired
+  return msUntil <= windowDays * 24 * 60 * 60 * 1000
+}
 
 export async function GET(req) {
   // --- Security check: only Vercel's cron system (or someone with the secret) can trigger this ---
@@ -16,7 +34,14 @@ export async function GET(req) {
   }
 
   const now = new Date()
-  const results = { trialWarnings: 0, expiryReminders: 0, sideBDigests: 0, errors: [] }
+  const results = {
+    trialWarnings: 0,
+    expiryReminders: 0,
+    sideBDigests: 0,
+    regularCouponReminders: 0,
+    exclusiveCouponReminders: 0,
+    errors: [],
+  }
 
   // ============================================================
   // 1. TRIAL EXPIRY WARNING — trial ends within 2 days, not yet sent
@@ -148,6 +173,75 @@ export async function GET(req) {
   } catch (err) {
     results.errors.push(`side B digest query: ${err.message}`)
   }
+
+  // ============================================================
+  // 4. COUPON EXPIRATION REMINDER — vendor-submitted coupon (regular_coupon_text
+  // / exclusive_coupon_text on magazine_vendors) expires within 7 days, not yet sent
+  // ============================================================
+  const processCouponReminders = async (couponType, textField, expirationField, reminderField) => {
+    try {
+      const { data: candidates } = await supabase
+        .from('magazine_vendors')
+        .select(`id, name, email, category_id, coupon_extend_token, ${textField}, ${expirationField}`)
+        .eq('is_published', true)
+        .eq('status', 'active')
+        .not(textField, 'is', null)
+        .not(expirationField, 'is', null)
+        .eq(reminderField, false)
+
+      for (const vendor of candidates || []) {
+        if (!isExpiringSoon(vendor[expirationField], now, COUPON_REMINDER_WINDOW_DAYS)) continue
+
+        try {
+          let token = vendor.coupon_extend_token
+          if (!token) {
+            token = crypto.randomBytes(32).toString('hex')
+            await supabase.from('magazine_vendors').update({ coupon_extend_token: token }).eq('id', vendor.id)
+          }
+
+          if (vendor.email) {
+            await sendCouponExpirationReminder(vendor.email, vendor.name, couponType, vendor[expirationField], token)
+          }
+
+          try {
+            const html = wrapEmail({
+              heading: 'Coupon Expiring Soon',
+              bodyHtml: `
+                <p style="font-size: 15px; line-height: 1.6;">
+                  <strong>${vendor.name}</strong>'s ${couponType} coupon expires on <strong>${vendor[expirationField]}</strong> — vendor has been notified.
+                </p>
+              `,
+              footerNote: 'This is an automated notification from SimchaPro.',
+            })
+
+            await resend.emails.send({
+              from: 'SimchaPro <noreply@simchapro.com>',
+              to: 'info@simchapro.com',
+              subject: `${vendor.name}'s ${couponType} coupon expires soon`,
+              html,
+            })
+          } catch (adminEmailErr) {
+            results.errors.push(`coupon reminder admin email for ${vendor.name}: ${adminEmailErr.message}`)
+          }
+
+          await supabase.from('magazine_vendors').update({ [reminderField]: true }).eq('id', vendor.id)
+
+          if (couponType === 'regular') {
+            results.regularCouponReminders++
+          } else {
+            results.exclusiveCouponReminders++
+          }
+        } catch (err) {
+          results.errors.push(`coupon reminder for ${vendor.name} (${couponType}): ${err.message}`)
+        }
+      }
+    } catch (err) {
+      results.errors.push(`coupon reminder query (${couponType}): ${err.message}`)
+    }
+  }
+
+  await processCouponReminders('regular', 'regular_coupon_text', 'regular_coupon_expiration', 'regular_coupon_reminder_sent')
+  await processCouponReminders('exclusive', 'exclusive_coupon_text', 'exclusive_coupon_expiration', 'exclusive_coupon_reminder_sent')
 
   return Response.json(results)
 }

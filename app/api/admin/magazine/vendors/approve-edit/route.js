@@ -30,6 +30,14 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: 'This submission is not an edit request.' }), { status: 400 });
     }
 
+    // Fetch the original's current coupon fields so we can tell whether this
+    // edit actually changes either coupon, and reset its reminder flag if so.
+    const { data: originalVendor } = await supabase
+      .from('magazine_vendors')
+      .select('regular_coupon_text, regular_coupon_expiration, exclusive_coupon_text, exclusive_coupon_expiration')
+      .eq('id', pending.edit_of_vendor_id)
+      .maybeSingle();
+
     // Copy the requested content fields onto the original, live vendor row.
     // id, created_at, view_count, click stats, sort_order, status, and
     // is_published are intentionally left untouched.
@@ -50,6 +58,21 @@ export async function POST(req) {
       exclusive_coupon_text: pending.exclusive_coupon_text,
       exclusive_coupon_expiration: pending.exclusive_coupon_expiration,
     };
+
+    if (originalVendor) {
+      if (
+        (originalVendor.regular_coupon_text || '') !== (pending.regular_coupon_text || '') ||
+        (originalVendor.regular_coupon_expiration || '') !== (pending.regular_coupon_expiration || '')
+      ) {
+        updatePayload.regular_coupon_reminder_sent = false;
+      }
+      if (
+        (originalVendor.exclusive_coupon_text || '') !== (pending.exclusive_coupon_text || '') ||
+        (originalVendor.exclusive_coupon_expiration || '') !== (pending.exclusive_coupon_expiration || '')
+      ) {
+        updatePayload.exclusive_coupon_reminder_sent = false;
+      }
+    }
 
     const { data: updatedVendor, error: updateError } = await supabase
       .from('magazine_vendors')

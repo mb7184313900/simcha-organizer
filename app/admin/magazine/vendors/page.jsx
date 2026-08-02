@@ -266,6 +266,24 @@ export default function MagazineVendorsAdmin() {
 
       let error
       if (form.id) {
+        // If either coupon's text or expiration actually changed, reset its
+        // reminder flag so the cron job can notify the vendor again later.
+        const originalVendor = vendors.find(v => v.id === form.id)
+        if (originalVendor) {
+          if (
+            (originalVendor.regular_coupon_text || '') !== (payload.regular_coupon_text || '') ||
+            (originalVendor.regular_coupon_expiration || '') !== (payload.regular_coupon_expiration || '')
+          ) {
+            payload.regular_coupon_reminder_sent = false
+          }
+          if (
+            (originalVendor.exclusive_coupon_text || '') !== (payload.exclusive_coupon_text || '') ||
+            (originalVendor.exclusive_coupon_expiration || '') !== (payload.exclusive_coupon_expiration || '')
+          ) {
+            payload.exclusive_coupon_reminder_sent = false
+          }
+        }
+
         const { error: updateError } = await supabase
           .from('magazine_vendors')
           .update(payload)
