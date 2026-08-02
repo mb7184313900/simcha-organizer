@@ -44,11 +44,31 @@ export async function GET(request) {
 
   const { data: subs, error: subsError } = await supabaseAdmin
     .from('subscriptions')
-    .select('user_id, email, plan, status, created_at, expires_at, wedding_id, is_free_grant, amount_paid')
+    .select('id, user_id, email, plan, status, created_at, expires_at, wedding_id, is_free_grant, amount_paid')
     .order('created_at', { ascending: false })
 
   if (subsError) {
     return NextResponse.json({ error: subsError.message }, { status: 500 })
+  }
+
+  // Used to give the Manage Access wedding-picker a human-readable label
+  // and current expiration for each wedding a signup is connected to.
+  const weddingIds = Array.from(new Set(subs.map(row => row.wedding_id).filter(Boolean)))
+  const weddingInfoMap = new Map()
+
+  if (weddingIds.length > 0) {
+    const { data: weddingsData } = await supabaseAdmin
+      .from('weddings')
+      .select('id, wedding_name, chosson_family, kallah_family, wedding_date, side_b_user_id')
+      .in('id', weddingIds)
+
+    for (const w of weddingsData || []) {
+      weddingInfoMap.set(w.id, {
+        label: w.wedding_name || `${w.chosson_family || '?'} & ${w.kallah_family || '?'}`,
+        date: w.wedding_date || null,
+        sideBUserId: w.side_b_user_id || null,
+      })
+    }
   }
 
   const { data: authData, error: authListError } = await supabaseAdmin.auth.admin.listUsers({
@@ -60,6 +80,7 @@ export async function GET(request) {
   }
 
   const nameMap = new Map()
+  const lastLoginMap = new Map()
   for (const authUser of authData.users) {
     const displayName =
       authUser.user_metadata?.display_name ||
@@ -67,6 +88,7 @@ export async function GET(request) {
       authUser.user_metadata?.name ||
       null
     nameMap.set(authUser.id, displayName)
+    lastLoginMap.set(authUser.id, authUser.last_sign_in_at || null)
   }
 
   // --- Recent signups: one row per user ---
@@ -77,6 +99,7 @@ export async function GET(request) {
       userMap.set(row.user_id, {
         user_id: row.user_id,
         name: nameMap.get(row.user_id) || null,
+        lastLogin: lastLoginMap.get(row.user_id) || null,
         email: row.email,
         weddingIds: new Set(),
         plans: [],
@@ -86,12 +109,30 @@ export async function GET(request) {
         freeWeddingCount: 0,
         paidWeddingCount: 0,
         totalPaid: 0,
+        weddingsMap: new Map(),
       })
     }
     const entry = userMap.get(row.user_id)
     entry.weddingIds.add(row.wedding_id)
     entry.plans.push(row.plan)
     entry.expiresAtList.push(row.expires_at)
+
+    // Keep only the most recent subscription row per wedding — matches
+    // findSubscription's "most recent by created_at" lookup in accessControl.js,
+    // so Manage Access edits the exact row a real access check would find.
+    const existingWeddingEntry = entry.weddingsMap.get(row.wedding_id)
+    if (!existingWeddingEntry || new Date(row.created_at) > new Date(existingWeddingEntry.createdAt)) {
+      entry.weddingsMap.set(row.wedding_id, {
+        weddingId: row.wedding_id,
+        subscriptionId: row.id,
+        expiresAt: row.expires_at,
+        plan: row.plan,
+        status: row.status,
+        createdAt: row.created_at,
+        amountPaid: row.amount_paid,
+        isFreeGrant: row.is_free_grant,
+      })
+    }
 
     const isRealPaidRow = PAID_PLANS.includes(row.plan) && !row.is_free_grant
 
@@ -128,6 +169,7 @@ export async function GET(request) {
       }
 
       return {
+        userId: u.user_id,
         name: u.name,
         email: u.email,
         weddingCount: u.weddingIds.size,
@@ -138,6 +180,19 @@ export async function GET(request) {
         soonestExpiresAt: sortedExpires[0] || null,
         accountType,
         totalPaid: u.totalPaid,
+        lastLogin: u.lastLogin,
+        weddings: Array.from(u.weddingsMap.values()).map(w => ({
+          weddingId: w.weddingId,
+          subscriptionId: w.subscriptionId,
+          expiresAt: w.expiresAt,
+          plan: w.plan,
+          status: w.status,
+          label: weddingInfoMap.get(w.weddingId)?.label || 'Unknown wedding',
+          date: weddingInfoMap.get(w.weddingId)?.date || null,
+          amountPaid: w.amountPaid,
+          isFreeGrant: w.isFreeGrant,
+          sideBUserId: weddingInfoMap.get(w.weddingId)?.sideBUserId || null,
+        })),
       }
     })
     .sort((a, b) => new Date(b.signedUpAt) - new Date(a.signedUpAt))
