@@ -83,9 +83,21 @@ function emptyForm() {
     website: '',
     instagram: '',
     blurb: '',
-    regular_coupon_text: '',
+    regular_coupon_percent_enabled: false,
+    regular_coupon_percent_off: '',
+    regular_coupon_dollar_enabled: false,
+    regular_coupon_dollar_off: '',
+    regular_coupon_special_offer: '',
+    regular_coupon_terms: '',
+    regular_coupon_code: '',
     regular_coupon_expiration: '',
-    exclusive_coupon_text: '',
+    exclusive_coupon_percent_enabled: false,
+    exclusive_coupon_percent_off: '',
+    exclusive_coupon_dollar_enabled: false,
+    exclusive_coupon_dollar_off: '',
+    exclusive_coupon_special_offer: '',
+    exclusive_coupon_terms: '',
+    exclusive_coupon_code: '',
     exclusive_coupon_expiration: '',
     is_published: true,
     ad_image_url: '',
@@ -313,9 +325,19 @@ export default function MagazineVendorsAdmin() {
         instagram: form.instagram.trim(),
         blurb: form.blurb.trim(),
         location: [...selectedLocations, ...customLocations].join(', '),
-        regular_coupon_text: form.regular_coupon_text.trim() || null,
+        regular_coupon_text: null,
+        regular_coupon_percent_off: form.regular_coupon_percent_enabled ? (form.regular_coupon_percent_off === '' ? null : Number(form.regular_coupon_percent_off)) : null,
+        regular_coupon_dollar_off: form.regular_coupon_dollar_enabled ? (form.regular_coupon_dollar_off === '' ? null : Number(form.regular_coupon_dollar_off)) : null,
+        regular_coupon_special_offer: form.regular_coupon_special_offer.trim() || null,
+        regular_coupon_terms: form.regular_coupon_terms.trim() || null,
+        regular_coupon_code: form.regular_coupon_code.trim() || null,
         regular_coupon_expiration: form.regular_coupon_expiration || null,
-        exclusive_coupon_text: form.exclusive_coupon_text.trim() || null,
+        exclusive_coupon_text: null,
+        exclusive_coupon_percent_off: form.exclusive_coupon_percent_enabled ? (form.exclusive_coupon_percent_off === '' ? null : Number(form.exclusive_coupon_percent_off)) : null,
+        exclusive_coupon_dollar_off: form.exclusive_coupon_dollar_enabled ? (form.exclusive_coupon_dollar_off === '' ? null : Number(form.exclusive_coupon_dollar_off)) : null,
+        exclusive_coupon_special_offer: form.exclusive_coupon_special_offer.trim() || null,
+        exclusive_coupon_terms: form.exclusive_coupon_terms.trim() || null,
+        exclusive_coupon_code: form.exclusive_coupon_code.trim() || null,
         exclusive_coupon_expiration: form.exclusive_coupon_expiration || null,
         is_published: form.is_published,
         ad_image_url: adImageUrl,
@@ -325,20 +347,33 @@ export default function MagazineVendorsAdmin() {
 
       let error
       if (form.id) {
-        // If either coupon's text or expiration actually changed, reset its
+        // If any regular/exclusive coupon field actually changed, reset its
         // reminder flag so the cron job can notify the vendor again later.
         const originalVendor = vendors.find(v => v.id === form.id)
         if (originalVendor) {
-          if (
-            (originalVendor.regular_coupon_text || '') !== (payload.regular_coupon_text || '') ||
-            (originalVendor.regular_coupon_expiration || '') !== (payload.regular_coupon_expiration || '')
-          ) {
+          const regularCouponChanged = [
+            'regular_coupon_percent_off',
+            'regular_coupon_dollar_off',
+            'regular_coupon_special_offer',
+            'regular_coupon_terms',
+            'regular_coupon_code',
+            'regular_coupon_expiration',
+          ].some((key) => (originalVendor[key] ?? '') !== (payload[key] ?? ''))
+
+          if (regularCouponChanged) {
             payload.regular_coupon_reminder_sent = false
           }
-          if (
-            (originalVendor.exclusive_coupon_text || '') !== (payload.exclusive_coupon_text || '') ||
-            (originalVendor.exclusive_coupon_expiration || '') !== (payload.exclusive_coupon_expiration || '')
-          ) {
+
+          const exclusiveCouponChanged = [
+            'exclusive_coupon_percent_off',
+            'exclusive_coupon_dollar_off',
+            'exclusive_coupon_special_offer',
+            'exclusive_coupon_terms',
+            'exclusive_coupon_code',
+            'exclusive_coupon_expiration',
+          ].some((key) => (originalVendor[key] ?? '') !== (payload[key] ?? ''))
+
+          if (exclusiveCouponChanged) {
             payload.exclusive_coupon_reminder_sent = false
           }
         }
@@ -392,9 +427,21 @@ export default function MagazineVendorsAdmin() {
       website: vendor.website || '',
       instagram: vendor.instagram || '',
       blurb: vendor.blurb || '',
-      regular_coupon_text: vendor.regular_coupon_text || '',
+      regular_coupon_percent_enabled: vendor.regular_coupon_percent_off !== null && vendor.regular_coupon_percent_off !== undefined,
+      regular_coupon_percent_off: vendor.regular_coupon_percent_off ?? '',
+      regular_coupon_dollar_enabled: vendor.regular_coupon_dollar_off !== null && vendor.regular_coupon_dollar_off !== undefined,
+      regular_coupon_dollar_off: vendor.regular_coupon_dollar_off ?? '',
+      regular_coupon_special_offer: vendor.regular_coupon_special_offer || '',
+      regular_coupon_terms: vendor.regular_coupon_terms || '',
+      regular_coupon_code: vendor.regular_coupon_code || '',
       regular_coupon_expiration: vendor.regular_coupon_expiration || '',
-      exclusive_coupon_text: vendor.exclusive_coupon_text || '',
+      exclusive_coupon_percent_enabled: vendor.exclusive_coupon_percent_off !== null && vendor.exclusive_coupon_percent_off !== undefined,
+      exclusive_coupon_percent_off: vendor.exclusive_coupon_percent_off ?? '',
+      exclusive_coupon_dollar_enabled: vendor.exclusive_coupon_dollar_off !== null && vendor.exclusive_coupon_dollar_off !== undefined,
+      exclusive_coupon_dollar_off: vendor.exclusive_coupon_dollar_off ?? '',
+      exclusive_coupon_special_offer: vendor.exclusive_coupon_special_offer || '',
+      exclusive_coupon_terms: vendor.exclusive_coupon_terms || '',
+      exclusive_coupon_code: vendor.exclusive_coupon_code || '',
       exclusive_coupon_expiration: vendor.exclusive_coupon_expiration || '',
       is_published: vendor.is_published,
       ad_image_url: vendor.ad_image_url || '',
@@ -1105,15 +1152,92 @@ export default function MagazineVendorsAdmin() {
               )}
             </div>
 
-            <div className="border border-gray-200 rounded-lg p-4 space-y-2">
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3">
               <p className="text-sm font-semibold text-gray-700">Regular Coupon (visible to everyone)</p>
-              <input
-                type="text"
-                value={form.regular_coupon_text}
-                onChange={(e) => updateField('regular_coupon_text', e.target.value)}
-                placeholder="Coupon text"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
-              />
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={form.regular_coupon_percent_enabled}
+                    onChange={(e) => updateField('regular_coupon_percent_enabled', e.target.checked)}
+                  />
+                  Offer a percentage off
+                </label>
+                {form.regular_coupon_percent_enabled && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-gray-500 mb-1">How much? (e.g. 10 for 10% off)</label>
+                    <input
+                      type="number"
+                      value={form.regular_coupon_percent_off}
+                      onChange={(e) => updateField('regular_coupon_percent_off', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={form.regular_coupon_dollar_enabled}
+                    onChange={(e) => updateField('regular_coupon_dollar_enabled', e.target.checked)}
+                  />
+                  Offer a dollar amount off
+                </label>
+                {form.regular_coupon_dollar_enabled && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-gray-500 mb-1">How much? (e.g. 15 for $15 off)</label>
+                    <input
+                      type="number"
+                      value={form.regular_coupon_dollar_off}
+                      onChange={(e) => updateField('regular_coupon_dollar_off', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Special offer (optional)</label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Use this for anything that doesn't fit above — like "Buy one get one free" or "Free upgrade with any package".
+                </p>
+                <input
+                  type="text"
+                  value={form.regular_coupon_special_offer}
+                  onChange={(e) => updateField('regular_coupon_special_offer', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Terms (optional)</label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Any conditions for this offer, e.g. "Valid on purchases over $200" or "Weekends only".
+                </p>
+                <input
+                  type="text"
+                  value={form.regular_coupon_terms}
+                  onChange={(e) => updateField('regular_coupon_terms', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Coupon code (optional)</label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Only needed if customers redeem this on your website at checkout.
+                </p>
+                <input
+                  type="text"
+                  value={form.regular_coupon_code}
+                  onChange={(e) => updateField('regular_coupon_code', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Expiration date (optional)</label>
                 <input
@@ -1125,15 +1249,92 @@ export default function MagazineVendorsAdmin() {
               </div>
             </div>
 
-            <div className="border border-gray-200 rounded-lg p-4 space-y-2">
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3">
               <p className="text-sm font-semibold text-gray-700">Exclusive Coupon (visible to paid SimchaPro members only)</p>
-              <input
-                type="text"
-                value={form.exclusive_coupon_text}
-                onChange={(e) => updateField('exclusive_coupon_text', e.target.value)}
-                placeholder="Coupon text"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
-              />
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={form.exclusive_coupon_percent_enabled}
+                    onChange={(e) => updateField('exclusive_coupon_percent_enabled', e.target.checked)}
+                  />
+                  Offer a percentage off
+                </label>
+                {form.exclusive_coupon_percent_enabled && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-gray-500 mb-1">How much? (e.g. 10 for 10% off)</label>
+                    <input
+                      type="number"
+                      value={form.exclusive_coupon_percent_off}
+                      onChange={(e) => updateField('exclusive_coupon_percent_off', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={form.exclusive_coupon_dollar_enabled}
+                    onChange={(e) => updateField('exclusive_coupon_dollar_enabled', e.target.checked)}
+                  />
+                  Offer a dollar amount off
+                </label>
+                {form.exclusive_coupon_dollar_enabled && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-gray-500 mb-1">How much? (e.g. 15 for $15 off)</label>
+                    <input
+                      type="number"
+                      value={form.exclusive_coupon_dollar_off}
+                      onChange={(e) => updateField('exclusive_coupon_dollar_off', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Special offer (optional)</label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Use this for anything that doesn't fit above — like "Buy one get one free" or "Free upgrade with any package".
+                </p>
+                <input
+                  type="text"
+                  value={form.exclusive_coupon_special_offer}
+                  onChange={(e) => updateField('exclusive_coupon_special_offer', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Terms (optional)</label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Any conditions for this offer, e.g. "Valid on purchases over $200" or "Weekends only".
+                </p>
+                <input
+                  type="text"
+                  value={form.exclusive_coupon_terms}
+                  onChange={(e) => updateField('exclusive_coupon_terms', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Coupon code (optional)</label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Only needed if customers redeem this on your website at checkout.
+                </p>
+                <input
+                  type="text"
+                  value={form.exclusive_coupon_code}
+                  onChange={(e) => updateField('exclusive_coupon_code', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Expiration date (optional)</label>
                 <input
