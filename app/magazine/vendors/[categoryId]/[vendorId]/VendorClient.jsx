@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../../../lib/supabase'
+import { getAccessStatus } from '../../../../../lib/accessControl'
 import { useRouter, useParams } from 'next/navigation'
 import Header from '../../../../../components/Header'
 import Footer from '../../../../../components/Footer'
@@ -14,6 +15,7 @@ export default function VendorClient() {
   const [category, setCategory] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [isPaidMember, setIsPaidMember] = useState(false)
   const router = useRouter()
   const params = useParams()
 
@@ -21,6 +23,11 @@ export default function VendorClient() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user || null)
+
+      if (user) {
+        const access = await getAccessStatus(user)
+        setIsPaidMember(access.state === 'active')
+      }
 
       const { data: vendorData, error } = await supabase
         .from('magazine_vendors')
@@ -73,7 +80,7 @@ export default function VendorClient() {
         {notFound ? (
           <p className="text-gray-400 italic mt-8">This vendor could not be found.</p>
         ) : (
-          <VendorDetailView vendor={vendor} onTrackStat={trackStat} />
+          <VendorDetailView vendor={vendor} onTrackStat={trackStat} isPaidMember={isPaidMember} />
         )}
       </div>
 

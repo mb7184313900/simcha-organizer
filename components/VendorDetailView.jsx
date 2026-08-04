@@ -14,7 +14,7 @@ function normalizeUrl(url) {
   return /^https?:\/\//i.test(url) ? url : 'https://' + url
 }
 
-export default function VendorDetailView({ vendor, onTrackStat }) {
+export default function VendorDetailView({ vendor, onTrackStat, isPaidMember }) {
   const track = (statType) => {
     if (onTrackStat) onTrackStat(vendor.id, statType)
   }
@@ -60,7 +60,14 @@ export default function VendorDetailView({ vendor, onTrackStat }) {
             </div>
           )}
 
-          {hasExclusiveCoupon && (
+          {hasExclusiveCoupon && isPaidMember && (
+            <div className="mt-2 border-2 border-dashed border-[#C9A227] rounded-lg p-4 text-center">
+              <p className="text-xs uppercase tracking-wide text-[#C9A227] font-medium mb-1">Exclusive Member Offer</p>
+              <p className="text-[#141d33] font-medium">{vendor.exclusive_coupon_text}</p>
+            </div>
+          )}
+
+          {hasExclusiveCoupon && !isPaidMember && (
             <div className="mt-2 border-2 border-dashed border-[#C9A227] rounded-lg p-4 text-center">
               <p className="text-xs uppercase tracking-wide text-[#C9A227] font-medium mb-1">Exclusive Member Offer</p>
               <p className="text-[#141d33] font-medium">This vendor offers an exclusive coupon for paid SimchaPro members.</p>
