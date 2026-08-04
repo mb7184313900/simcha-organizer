@@ -839,7 +839,19 @@ export default function ChecklistClient() {
       <Header user={user} onDashboardClick={() => router.push('/dashboard')} />
 
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <h2 className="text-3xl font-bold text-blue-900 mb-2">Simcha Checklist 📋</h2>
+        <h2 className="text-3xl font-bold text-blue-900 mb-2 flex items-center gap-2">
+          <span>Simcha Checklist 📋</span>
+          <a
+            href="/help#checklist"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Get help with the Simcha Checklist"
+            title="Get help with the Simcha Checklist"
+            className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-[#C9A227] text-[#141d33] text-sm font-bold leading-none hover:opacity-80 hover:scale-110 transition-all"
+          >
+            ?
+          </a>
+        </h2>
         <p className="text-gray-500 mb-6 text-sm leading-relaxed max-w-xl">
           Planning a wedding can be overwhelming. We've gathered practical checklists, traditional customs, and planning guides to help keep everything organized from the Shidduch through the Sheva Brachos.
         </p>
