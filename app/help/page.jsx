@@ -36,6 +36,14 @@ function NoteCallout({ children }) {
   )
 }
 
+function PaidFeatureBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 bg-[#C9A227]/10 border border-[#C9A227]/30 text-[#C9A227] text-xs font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full">
+      🔒 Paid Feature
+    </span>
+  )
+}
+
 function GettingStartedContent() {
   return (
     <>
@@ -79,8 +87,64 @@ function GettingStartedContent() {
   )
 }
 
+function InvitingPartnerContent() {
+  return (
+    <>
+      <p className="mb-3">
+        Planning a wedding is a two-family affair — SimchaPro lets you bring the other side in to collaborate.
+      </p>
+
+      <p className="mb-4">
+        <PaidFeatureBadge /> Inviting Side B is only available for paid members.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">How Side A invites Side B</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Go to the Invite page</li>
+        <li>Enter the email address of your contact on the other side</li>
+        <li>Click Send Invite</li>
+        <li>They'll receive a branded email invitation to join</li>
+      </ul>
+      <ScreenshotPlaceholder description="Invite page — enter email screen" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">What happens after you send the invite</h3>
+      <ul className="list-disc pl-5 space-y-1 mb-4">
+        <li>If they accept: Side A gets a "Mazel Tov!" notification, and Side B now has free connected access to the wedding — no separate payment needed</li>
+        <li>If they don't respond or decline: nothing changes on your end; you can resend the invite anytime</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">What Side B can see and do once connected</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Full access to the Checklist and Expense Tracker for this wedding</li>
+        <li>Their own private expenses (only visible to their side)</li>
+        <li>Shared expenses (visible to both sides)</li>
+      </ul>
+
+      <NoteCallout>
+        📌 Side B's access mirrors Side A's plan automatically — Side B never pays directly. If Side A's membership expires or is cancelled, Side B's access changes too.
+      </NoteCallout>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Shared vs. private expenses</h3>
+      <ul className="list-disc pl-5 space-y-1 mb-2">
+        <li>Shared expenses — visible to both Side A and Side B, useful for costs split between families</li>
+        <li>Private expenses — visible only to the side that entered them</li>
+      </ul>
+      <p>Every expense is tagged by family side, so it's always clear who added what.</p>
+      <ScreenshotPlaceholder description="Expense entry showing shared/private toggle" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Revoking and reinstating Side B's access</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Side A can revoke Side B's access at any time from the Invite page</li>
+        <li>Revoking doesn't delete any data — it just removes Side B's ability to view/edit</li>
+        <li>Side A can reinstate access later, and everything picks back up where it left off</li>
+      </ul>
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
+  'inviting-partner': InvitingPartnerContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
