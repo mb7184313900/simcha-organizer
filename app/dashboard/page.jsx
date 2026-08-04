@@ -35,19 +35,6 @@ export default function Dashboard() {
 
   if (!user || !access) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
-  if (access.state === 'trial_expired') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow border text-center max-w-md">
-          <div className="text-5xl mb-4">⏰</div>
-          <h2 className="text-2xl font-bold text-blue-900 mb-2">Your free trial has ended</h2>
-          <p className="text-gray-500 mb-6">Activate your account for full access to SimchaPro.</p>
-          <a href="/pricing" className="block bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800">Activate for $99</a>
-        </div>
-      </div>
-    )
-  }
-
   if (access.state === 'none') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -122,6 +109,25 @@ export default function Dashboard() {
           <div className={`rounded-xl p-4 mb-6 font-medium ${access.daysLeft <= 3 ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
             {access.daysLeft <= 3 ? `⚠️ Your free trial expires in ${access.daysLeft} day${access.daysLeft === 1 ? '' : 's'}! ` : `⏳ ${access.daysLeft} days left in your free trial. `}
             <a href="/pricing" className="underline font-bold">Upgrade now</a>
+          </div>
+        )}
+
+        {access.state === 'trial_expired' && !access.isSideB && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-yellow-800">⏰ Your free trial has ended</p>
+              <p className="text-yellow-700 text-sm">You're viewing your data in read-only mode. Activate for $99 to add, edit, and check off items.</p>
+            </div>
+            <a href="/pricing" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
+              Activate for $99
+            </a>
+          </div>
+        )}
+
+        {access.state === 'trial_expired' && access.isSideB && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+            <p className="font-semibold text-yellow-800">⏰ Free trial has ended</p>
+            <p className="text-yellow-700 text-sm">The wedding owner's free trial has ended. Ask them to activate to make changes again.</p>
           </div>
         )}
 

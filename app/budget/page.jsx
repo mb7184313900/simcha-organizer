@@ -761,20 +761,31 @@ export default function ExpenseTracker() {
         <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
-        {/* Read-only banner — edit access expired (1-year window passed) */}
-        {access?.state === 'expired' && (
+        {/* Read-only banner — edit access expired (1-year window passed, or trial ended) */}
+        {(access?.state === 'expired' || access?.state === 'trial_expired') && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="font-semibold text-yellow-800">⏰ {isSideB ? 'Edit access has expired' : 'Your edit access has expired'}</p>
+              <p className="font-semibold text-yellow-800">
+                ⏰ {access.state === 'trial_expired'
+                  ? (isSideB ? 'Free trial has ended' : 'Your free trial has ended')
+                  : (isSideB ? 'Edit access has expired' : 'Your edit access has expired')}
+              </p>
               <p className="text-yellow-700 text-sm">
-                {isSideB
-                  ? "You're viewing this expense tracker in read-only mode. Ask the wedding owner to renew to make changes again."
-                  : "You're viewing this expense tracker in read-only mode. Renew to add or edit expenses."}
+                {access.state === 'trial_expired'
+                  ? (isSideB
+                      ? "The wedding owner's free trial has ended. Ask them to activate to make changes again."
+                      : "You're viewing this expense tracker in read-only mode. Activate for $99 to add or edit expenses.")
+                  : (isSideB
+                      ? "You're viewing this expense tracker in read-only mode. Ask the wedding owner to renew to make changes again."
+                      : "You're viewing this expense tracker in read-only mode. Renew to add or edit expenses.")}
               </p>
             </div>
             {!isSideB && (
-              <a href="/renew" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
-                Renew Now
+              <a
+                href={access.state === 'trial_expired' ? '/pricing' : '/renew'}
+                className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center"
+              >
+                {access.state === 'trial_expired' ? 'Activate for $99' : 'Renew Now'}
               </a>
             )}
           </div>

@@ -871,19 +871,30 @@ export default function ChecklistClient() {
           </div>
         )}
 
-        {access?.state === 'expired' && (
+        {(access?.state === 'expired' || access?.state === 'trial_expired') && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="font-semibold text-yellow-800">⏰ {access.isSideB ? 'Edit access has expired' : 'Your edit access has expired'}</p>
+              <p className="font-semibold text-yellow-800">
+                ⏰ {access.state === 'trial_expired'
+                  ? (access.isSideB ? 'Free trial has ended' : 'Your free trial has ended')
+                  : (access.isSideB ? 'Edit access has expired' : 'Your edit access has expired')}
+              </p>
               <p className="text-yellow-700 text-sm">
-                {access.isSideB
-                  ? "You're viewing this checklist in read-only mode. Ask the wedding owner to renew to make changes again."
-                  : "You're viewing this checklist in read-only mode. Renew to check off items, add tasks, and more."}
+                {access.state === 'trial_expired'
+                  ? (access.isSideB
+                      ? "The wedding owner's free trial has ended. Ask them to activate to make changes again."
+                      : "You're viewing this checklist in read-only mode. Activate for $99 to add, edit, and check off items.")
+                  : (access.isSideB
+                      ? "You're viewing this checklist in read-only mode. Ask the wedding owner to renew to make changes again."
+                      : "You're viewing this checklist in read-only mode. Renew to check off items, add tasks, and more.")}
               </p>
             </div>
             {!access.isSideB && (
-              <a href="/renew" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
-                Renew Now
+              <a
+                href={access.state === 'trial_expired' ? '/pricing' : '/renew'}
+                className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center"
+              >
+                {access.state === 'trial_expired' ? 'Activate for $99' : 'Renew Now'}
               </a>
             )}
           </div>

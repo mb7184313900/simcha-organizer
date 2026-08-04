@@ -145,7 +145,9 @@ export default function WeddingProfile() {
 
         {!canEditProfile && !isSideB && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 text-yellow-700 text-sm">
-            Your edit access has expired. Renew to make changes to your wedding info.
+            {access?.state === 'trial_expired'
+              ? 'Your free trial has ended. Activate for $99 to make changes to your wedding info.'
+              : 'Your edit access has expired. Renew to make changes to your wedding info.'}
           </div>
         )}
 
