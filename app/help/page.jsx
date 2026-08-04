@@ -533,6 +533,29 @@ function AccountSettingsContent() {
   )
 }
 
+function DashboardContent() {
+  return (
+    <>
+      <p className="mb-4">
+        Your home base for tracking wedding progress at a glance.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Wedding countdown</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>As soon as you set a wedding date, your Dashboard shows a live countdown of days remaining until the big day</li>
+        <li>This updates automatically — no need to refresh or recalculate anything</li>
+      </ul>
+      <ScreenshotPlaceholder description="Dashboard countdown display" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">At-a-glance overview</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Quick snapshot of your wedding's progress — a jumping-off point to the Checklist, Expense Tracker, and other tools</li>
+      </ul>
+      <ScreenshotPlaceholder description="Full Dashboard view" />
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
@@ -543,6 +566,7 @@ const SECTION_CONTENT = {
   'magazine': MagazineContent,
   'vendor-submission': VendorSubmissionContent,
   'account-settings': AccountSettingsContent,
+  'dashboard': DashboardContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
