@@ -326,12 +326,98 @@ function InviteSystemContent() {
   )
 }
 
+const PLAN_COMPARISON_ROWS = [
+  { feature: 'View Checklist (all 14 tabs)', free: true, paid: true },
+  { feature: 'Check off Checklist items', free: false, paid: true },
+  { feature: 'Add/remove Checklist items', free: false, paid: true },
+  { feature: 'Checklist dates & countdowns', free: false, paid: true },
+  { feature: 'Expense Tracker (full)', free: false, paid: true },
+  { feature: 'Invite Side B', free: false, paid: true },
+  { feature: 'Simcha Magazine articles', free: true, paid: true },
+  { feature: 'Vendor Directory', free: true, paid: true },
+  { feature: 'Coupons', free: true, paid: true },
+  { feature: 'Exclusive Coupons', free: false, paid: true },
+]
+
+function PlanComparisonMark({ included }) {
+  return included ? (
+    <span className="text-green-600 font-semibold">✓</span>
+  ) : (
+    <span className="text-gray-300">✗</span>
+  )
+}
+
+function PaymentsContent() {
+  return (
+    <>
+      <p className="mb-4">
+        Here's exactly how SimchaPro's pricing works, from trial to renewal.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Free vs. Paid — quick comparison</h3>
+      <div className="my-3 overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-sm border-collapse min-w-[420px]">
+          <thead>
+            <tr className="bg-[#141d33] text-white">
+              <th className="text-left px-4 py-2 font-medium">Feature</th>
+              <th className="text-center px-4 py-2 font-medium">Free</th>
+              <th className="text-center px-4 py-2 font-medium text-[#C9A227]">Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PLAN_COMPARISON_ROWS.map((row, i) => (
+              <tr key={row.feature} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className="px-4 py-2 border-t border-gray-100">{row.feature}</td>
+                <td className="px-4 py-2 border-t border-gray-100 text-center">
+                  <PlanComparisonMark included={row.free} />
+                </td>
+                <td className="px-4 py-2 border-t border-gray-100 text-center">
+                  <PlanComparisonMark included={row.paid} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">The 7-day free trial</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Every new wedding starts with a 7-day free trial</li>
+        <li>Full access to all paid features during the trial — no payment required upfront</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">The one-time payment</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>After the trial, upgrade with a $99 one-time payment per wedding</li>
+        <li>This is a one-time charge, not a recurring subscription — you own access to that wedding's plan going forward, subject to renewal</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Renewal options</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>After your first year, renew at $49/year or $29/6 months to keep full editing access</li>
+        <li>Renewing doesn't reset your data — everything you've entered stays exactly as it is</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">What happens if your trial or access expires</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>If your trial ends without upgrading, or your paid access lapses, your account moves to view-only mode</li>
+        <li>You can still see everything — your checklist, your expenses, your vendors — but editing (checking items, adding expenses, etc.) is disabled until you upgrade or renew</li>
+      </ul>
+      <NoteCallout>
+        Your data is never deleted when access expires — it's all still there, waiting for you.
+      </NoteCallout>
+      <ScreenshotPlaceholder description="View-only mode banner with upgrade prompt" />
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
   'checklist': ChecklistContent,
   'expense-tracker': ExpenseTrackerContent,
   'invite-system': InviteSystemContent,
+  'payments': PaymentsContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
