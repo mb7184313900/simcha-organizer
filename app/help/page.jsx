@@ -289,11 +289,49 @@ function ExpenseTrackerContent() {
   )
 }
 
+function InviteSystemContent() {
+  return (
+    <>
+      <p className="mb-4">
+        A closer look at how the invite system works technically — what happens at each step.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">The invite flow</h3>
+      <ol className="list-decimal pl-5 space-y-1">
+        <li>Side A goes to the Invite page and enters Side B's email</li>
+        <li>Side B receives a branded invite email with a link to accept</li>
+        <li>Side B clicks the link, creates or logs into their SimchaPro account, and confirms</li>
+        <li>Once accepted, Side A receives a "Mazel Tov!" notification, and Side B gets connected access to the wedding</li>
+      </ol>
+      <ScreenshotPlaceholder description="Invite acceptance flow" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">If Side B declines or doesn't respond</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>No changes happen to Side A's wedding or data</li>
+        <li>Side A can resend the invite at any time</li>
+        <li>Side A can also revoke a pending invite if needed</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">The one-year edit window</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Once a wedding is created, both sides have one year of full edit access (checking off items, entering expenses, etc.), subject to an active paid plan</li>
+        <li>After one year, the wedding automatically switches to view-only — nothing is deleted, but editing is disabled until a renewal is made</li>
+      </ul>
+
+      <NoteCallout>
+        This one-year window applies to editing generally, separate from trial/subscription status — see "Payments &amp; Renewals" for how those interact.
+      </NoteCallout>
+      <ScreenshotPlaceholder description="View-only banner after 1-year mark" />
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
   'checklist': ChecklistContent,
   'expense-tracker': ExpenseTrackerContent,
+  'invite-system': InviteSystemContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
