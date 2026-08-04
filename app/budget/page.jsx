@@ -815,7 +815,19 @@ export default function ExpenseTracker() {
         {/* Invite Side B Panel — always manageable by Side A, even with expired edit access */}
         {!isSideB && <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-blue-900">👨‍👩‍👧 Other Family Access</h3>
+            <h3 className="font-bold text-blue-900 flex items-center gap-2">
+              <span>👨‍👩‍👧 Other Family Access</span>
+              <a
+                href="/help#inviting-partner"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Get help with inviting your partner's side"
+                title="Get help with inviting your partner's side"
+                className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-[#C9A227] text-[#141d33] text-sm font-bold leading-none hover:opacity-80 hover:scale-110 transition-all"
+              >
+                ?
+              </a>
+            </h3>
             {existingInvite && (
               <span className={`text-xs px-2 py-1 rounded-full font-semibold ${existingInvite.status === 'accepted' ? 'bg-green-100 text-green-700' : existingInvite.status === 'revoked' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'}`}>
                 {existingInvite.status === 'accepted' ? '✓ Connected' : existingInvite.status === 'revoked' ? 'Revoked' : '⏳ Pending'}
