@@ -452,6 +452,58 @@ function MagazineContent() {
   )
 }
 
+function VendorSubmissionContent() {
+  return (
+    <>
+      <p className="italic text-gray-500 mb-3">
+        This section is for vendors who want to advertise on SimchaPro.
+      </p>
+
+      <p className="mb-4">
+        Want your business listed in the Simcha Magazine Vendor Directory? Here's how to get started.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Submitting your listing</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Go to simchapro.com/advertise</li>
+        <li>Fill out the submission form with your business details: category, location, description, contact info, and photos</li>
+        <li>Upload a logo and, optionally, a flyer</li>
+        <li>You can also select a custom category or location if yours isn't listed</li>
+        <li>Add a note to our team if there's anything specific you'd like us to know</li>
+        <li>Submit — your listing goes into our review queue</li>
+      </ul>
+      <ScreenshotPlaceholder description="/advertise submission form" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding coupons to your listing</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>You can include a Regular Coupon, an Exclusive Coupon (or both), each with its own expiration date</li>
+        <li>Exclusive Coupons are shown only to SimchaPro's paid members — a great way to stand out to serious, engaged customers</li>
+      </ul>
+      <ScreenshotPlaceholder description="Coupon fields on the submission form" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">What happens after you submit</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>You'll receive a confirmation email once your submission is received</li>
+        <li>Our team reviews every listing before it goes live</li>
+        <li>If approved, you'll get an email with a link to your live listing</li>
+        <li>If we need changes, you'll get an email explaining what to update</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Making changes to your listing later</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Simply resubmit the form using the same email address you used originally</li>
+        <li>This is treated as an edit request, not a new listing — our team reviews the specific changes (with a before/after comparison) before approving</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Coupon expiration reminders</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>If your coupon is about to expire, you'll get a reminder email 7 days before it expires</li>
+        <li>That email includes a link where you can extend the coupon yourself — your extension request goes through the same admin approval process</li>
+      </ul>
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
@@ -460,6 +512,7 @@ const SECTION_CONTENT = {
   'invite-system': InviteSystemContent,
   'payments': PaymentsContent,
   'magazine': MagazineContent,
+  'vendor-submission': VendorSubmissionContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
