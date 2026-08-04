@@ -504,6 +504,35 @@ function VendorSubmissionContent() {
   )
 }
 
+function AccountSettingsContent() {
+  return (
+    <>
+      <p className="mb-4">
+        Manage your profile and keep track of multiple weddings from one account.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Managing your profile</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Update your name, email, and password from your account settings</li>
+        <li>Your profile applies across all weddings linked to your account</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Multiple weddings per account</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>If you're planning more than one wedding (e.g. you're helping with a sibling's wedding too), you can create additional weddings from the My Weddings page</li>
+        <li>Each wedding has its own separate Checklist, Expense Tracker, and trial/subscription status</li>
+        <li>Switch between weddings from the My Weddings page at any time</li>
+      </ul>
+      <ScreenshotPlaceholder description="My Weddings page with multiple wedding cards" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Logging out</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Click your profile icon and select Log Out</li>
+      </ul>
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
@@ -513,6 +542,7 @@ const SECTION_CONTENT = {
   'payments': PaymentsContent,
   'magazine': MagazineContent,
   'vendor-submission': VendorSubmissionContent,
+  'account-settings': AccountSettingsContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
