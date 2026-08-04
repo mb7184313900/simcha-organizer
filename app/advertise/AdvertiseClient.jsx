@@ -6,19 +6,7 @@ import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import VendorTile from '../../components/VendorTile'
 import VendorDetailView from '../../components/VendorDetailView'
-
-const LOCATIONS = [
-  'Boro Park',
-  'Lakewood',
-  'Monsey',
-  'Brooklyn',
-  'Flatbush',
-  'Crown Heights',
-  'Williamsburg',
-  'Monroe',
-  'Spring Valley',
-  'Online/Nationwide',
-]
+import { LOCATIONS } from '../../lib/vendorLocations'
 
 export default function AdvertiseClient() {
   const [categories, setCategories] = useState([])

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import MagazineAdminNav from '../../../../components/MagazineAdminNav'
 import VendorTile from '../../../../components/VendorTile'
 import VendorDetailView from '../../../../components/VendorDetailView'
+import { LOCATIONS } from '../../../../lib/vendorLocations'
 
 const ADMIN_EMAIL = 'mb7184313900@gmail.com'
 
@@ -16,6 +17,16 @@ function resolveCategoryName(vendor) {
     return vendor.vendor_categories?.name || 'No category'
   }
   return vendor.custom_category_text || 'No category'
+}
+
+// Splits a vendor's stored "location" string back into the standard
+// checkbox selections vs. custom entries, for editing an existing vendor.
+function parseLocationString(locationStr) {
+  if (!locationStr) return { selected: [], custom: [] }
+  const parts = locationStr.split(',').map((s) => s.trim()).filter(Boolean)
+  const selected = parts.filter((p) => LOCATIONS.includes(p))
+  const custom = parts.filter((p) => !LOCATIONS.includes(p))
+  return { selected, custom }
 }
 
 function couponSummary(text, expiration) {
@@ -40,6 +51,7 @@ function buildVendorDiff(original, pending) {
   addRow('Category', resolveCategoryName(original), resolveCategoryName(pending))
   addRow('Phone', original.phone, pending.phone)
   addRow('WhatsApp', original.whatsapp, pending.whatsapp)
+  addRow('Email', original.email, pending.email)
   addRow('Website', original.website, pending.website)
   addRow('Instagram', original.instagram, pending.instagram)
   addRow('Blurb', original.blurb, pending.blurb)
@@ -67,9 +79,10 @@ function emptyForm() {
     category_id: '',
     phone: '',
     whatsapp: '',
+    email: '',
     website: '',
+    instagram: '',
     blurb: '',
-    location: '',
     regular_coupon_text: '',
     regular_coupon_expiration: '',
     exclusive_coupon_text: '',
@@ -97,6 +110,17 @@ export default function MagazineVendorsAdmin() {
   const [adImageFile, setAdImageFile] = useState(null)
   const [thumbImageFile, setThumbImageFile] = useState(null)
   const [uploading, setUploading] = useState(false)
+
+  // Category custom-text toggle — persistent and always available, independent
+  // of whether custom_category_text currently has a value (it gets nulled out
+  // once a real category is assigned, so visibility can't be driven by that data).
+  const [showCustomCategory, setShowCustomCategory] = useState(false)
+
+  // Structured location UI (checkboxes + custom chips), same pattern as the
+  // public /advertise form. Joined into a single "location" string on save.
+  const [selectedLocations, setSelectedLocations] = useState([])
+  const [customLocations, setCustomLocations] = useState([])
+  const [newCustomLocation, setNewCustomLocation] = useState('')
 
   const [filterCategoryId, setFilterCategoryId] = useState('all')
   const [vendorSortMode, setVendorSortMode] = useState('alphabetical')
@@ -161,6 +185,39 @@ export default function MagazineVendorsAdmin() {
 
   const updateField = (key, value) => {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  // Mutual exclusion between the category dropdown and the custom-category
+  // text box, matching the public form's handleCategorySelect/handleCustomCategoryChange.
+  const handleCategorySelect = (value) => {
+    updateField('category_id', value)
+    if (value) {
+      updateField('custom_category_text', '')
+    }
+  }
+
+  const handleCustomCategoryChange = (value) => {
+    updateField('custom_category_text', value)
+    if (value) {
+      updateField('category_id', '')
+    }
+  }
+
+  const toggleLocation = (loc) => {
+    setSelectedLocations(prev =>
+      prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc]
+    )
+  }
+
+  const addCustomLocation = () => {
+    const trimmed = newCustomLocation.trim()
+    if (!trimmed) return
+    setCustomLocations(prev => [...prev, trimmed])
+    setNewCustomLocation('')
+  }
+
+  const removeCustomLocation = (index) => {
+    setCustomLocations(prev => prev.filter((_, i) => i !== index))
   }
 
   const uploadImage = async (file) => {
@@ -251,9 +308,11 @@ export default function MagazineVendorsAdmin() {
         custom_category_text: null,
         phone: form.phone.trim(),
         whatsapp: form.whatsapp.trim(),
+        email: form.email.trim(),
         website: form.website.trim(),
+        instagram: form.instagram.trim(),
         blurb: form.blurb.trim(),
-        location: form.location.trim(),
+        location: [...selectedLocations, ...customLocations].join(', '),
         regular_coupon_text: form.regular_coupon_text.trim() || null,
         regular_coupon_expiration: form.regular_coupon_expiration || null,
         exclusive_coupon_text: form.exclusive_coupon_text.trim() || null,
@@ -308,6 +367,10 @@ export default function MagazineVendorsAdmin() {
         setForm(emptyForm())
         setAdImageFile(null)
         setThumbImageFile(null)
+        setShowCustomCategory(false)
+        setSelectedLocations([])
+        setCustomLocations([])
+        setNewCustomLocation('')
         loadData()
       }
     } catch (err) {
@@ -325,9 +388,10 @@ export default function MagazineVendorsAdmin() {
       category_id: vendor.category_id || '',
       phone: vendor.phone || '',
       whatsapp: vendor.whatsapp || '',
+      email: vendor.email || '',
       website: vendor.website || '',
+      instagram: vendor.instagram || '',
       blurb: vendor.blurb || '',
-      location: vendor.location || '',
       regular_coupon_text: vendor.regular_coupon_text || '',
       regular_coupon_expiration: vendor.regular_coupon_expiration || '',
       exclusive_coupon_text: vendor.exclusive_coupon_text || '',
@@ -340,12 +404,21 @@ export default function MagazineVendorsAdmin() {
     })
     setAdImageFile(null)
     setThumbImageFile(null)
+    setShowCustomCategory(!vendor.category_id && !!vendor.custom_category_text)
+    const { selected, custom } = parseLocationString(vendor.location)
+    setSelectedLocations(selected)
+    setCustomLocations(custom)
+    setNewCustomLocation('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const cancelEdit = () => {
     setForm(emptyForm())
     setAdImageFile(null)
+    setShowCustomCategory(false)
+    setSelectedLocations([])
+    setCustomLocations([])
+    setNewCustomLocation('')
     setThumbImageFile(null)
   }
 
@@ -883,7 +956,7 @@ export default function MagazineVendorsAdmin() {
               <label className="block text-sm text-gray-600 mb-1">Category *</label>
               <select
                 value={form.category_id}
-                onChange={(e) => updateField('category_id', e.target.value)}
+                onChange={(e) => handleCategorySelect(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
               >
                 <option value="">Choose a category...</option>
@@ -892,15 +965,23 @@ export default function MagazineVendorsAdmin() {
                 ))}
               </select>
 
-              {!form.category_id && form.custom_category_text && (
+              <button
+                type="button"
+                onClick={() => setShowCustomCategory(v => !v)}
+                className="mt-2 text-xs text-[#141d33] underline hover:text-[#C9A227] transition-colors"
+              >
+                {showCustomCategory ? 'Use an existing category instead' : "Use a custom category instead"}
+              </button>
+
+              {showCustomCategory && (
                 <div className="mt-2">
                   <label className="block text-xs text-gray-500 mb-1">
-                    This vendor submitted a custom category. Confirm or edit the name below — it will be matched to an existing category of this name, or created as new, when you save.
+                    Custom category name — it will be matched to an existing category of this name, or created as new, when you save.
                   </label>
                   <input
                     type="text"
                     value={form.custom_category_text}
-                    onChange={(e) => updateField('custom_category_text', e.target.value)}
+                    onChange={(e) => handleCustomCategoryChange(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
                   />
                 </div>
@@ -930,12 +1011,32 @@ export default function MagazineVendorsAdmin() {
             </div>
 
             <div>
+              <label className="block text-sm text-gray-600 mb-1">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm text-gray-600 mb-1">Website</label>
               <input
                 type="text"
                 value={form.website}
                 onChange={(e) => updateField('website', e.target.value)}
                 placeholder="https://..."
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Instagram Link</label>
+              <input
+                type="text"
+                value={form.instagram}
+                onChange={(e) => updateField('instagram', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
               />
             </div>
@@ -951,14 +1052,57 @@ export default function MagazineVendorsAdmin() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Location</label>
-              <input
-                type="text"
-                value={form.location}
-                onChange={(e) => updateField('location', e.target.value)}
-                placeholder="e.g. Boro Park, Lakewood"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
-              />
+              <label className="block text-sm text-gray-600 mb-2">Location</label>
+              <div className="grid grid-cols-2 gap-2">
+                {LOCATIONS.map(loc => (
+                  <label key={loc} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedLocations.includes(loc)}
+                      onChange={() => toggleLocation(loc)}
+                    />
+                    {loc}
+                  </label>
+                ))}
+              </div>
+
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  placeholder="Add custom location"
+                  value={newCustomLocation}
+                  onChange={(e) => setNewCustomLocation(e.target.value)}
+                  className="flex-1 min-w-0 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                />
+                <button
+                  type="button"
+                  onClick={addCustomLocation}
+                  className="shrink-0 bg-[#141d33] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#1e2b4d]"
+                >
+                  Add
+                </button>
+              </div>
+
+              {customLocations.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {customLocations.map((loc, index) => (
+                    <span
+                      key={`${loc}-${index}`}
+                      className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-full border border-gray-200"
+                    >
+                      {loc}
+                      <button
+                        type="button"
+                        onClick={() => removeCustomLocation(index)}
+                        aria-label={`Remove ${loc}`}
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="border border-gray-200 rounded-lg p-4 space-y-2">
