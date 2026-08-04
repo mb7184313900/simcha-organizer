@@ -18,7 +18,74 @@ const SECTIONS = [
   { id: 'faq', title: 'FAQ / Troubleshooting' },
 ]
 
+// Reusable content-block helpers, shared across accordion sections.
+function ScreenshotPlaceholder({ description }) {
+  return (
+    <div className="my-3 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg py-8 px-4 text-center">
+      <p className="text-2xl mb-1">🖼️</p>
+      <p className="text-sm text-gray-400 italic">Screenshot coming soon — {description}</p>
+    </div>
+  )
+}
+
+function NoteCallout({ children }) {
+  return (
+    <div className="my-3 bg-[#C9A227]/10 border border-[#C9A227]/30 rounded-lg px-4 py-3 text-sm text-[#141d33]">
+      {children}
+    </div>
+  )
+}
+
+function GettingStartedContent() {
+  return (
+    <>
+      <p className="mb-4">
+        Welcome to SimchaPro! Here's everything you need to know to get your wedding planning up and running.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Signing up</h3>
+      <ul className="list-disc pl-5 space-y-1 mb-4">
+        <li>Go to the SimchaPro homepage and click Sign Up</li>
+        <li>Enter your name, email, and password</li>
+        <li>Check the box agreeing to the Terms &amp; Conditions</li>
+        <li>Click Create Account</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Creating your wedding</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Once logged in, click New Wedding</li>
+        <li>Enter the wedding name and wedding date</li>
+        <li>This starts your 7-day free trial — full access to explore the Checklist, Expense Tracker, and everything else, no payment required upfront</li>
+      </ul>
+      <ScreenshotPlaceholder description="New Wedding creation screen" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Understanding Side A and Side B</h3>
+      <p className="mb-2">SimchaPro is built for both families to plan together:</p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Side A is whoever creates the wedding first (the "owner" of that wedding's account)</li>
+        <li>Side B is the other family, invited in afterward by Side A</li>
+      </ul>
+      <ScreenshotPlaceholder description="Dashboard showing Side A/Side B labels" />
+
+      <NoteCallout>
+        📌 Only Side A can create the wedding and manage the subscription. Side B joins by invitation — see the "Inviting Your Partner's Side" section below.
+      </NoteCallout>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">After your trial ends</h3>
+      <p>
+        If you don't upgrade to a paid plan, your account moves to view-only mode — your data is never deleted, but checking off items, adding expenses, and other editing actions require a paid membership. See the "Payments &amp; Renewals" section for full details.
+      </p>
+    </>
+  )
+}
+
+const SECTION_CONTENT = {
+  'getting-started': GettingStartedContent,
+}
+
 function AccordionSection({ id, title, isOpen, onToggle }) {
+  const Content = SECTION_CONTENT[id]
+
   return (
     <div
       id={id}
@@ -45,7 +112,7 @@ function AccordionSection({ id, title, isOpen, onToggle }) {
 
       {isOpen && (
         <div className="px-6 pb-6 pt-4 border-t border-gray-100 text-gray-600 leading-relaxed">
-          <p className="text-gray-400 italic">Content coming soon.</p>
+          {Content ? <Content /> : <p className="text-gray-400 italic">Content coming soon.</p>}
         </div>
       )}
     </div>
