@@ -1,20 +1,15 @@
 import Link from 'next/link'
-
-function isCouponActive(text, expiration) {
-  if (!text) return false
-  if (!expiration) return true
-  return new Date(`${expiration}T23:59:59`).getTime() >= Date.now()
-}
+import { hasActiveCoupon } from '../lib/couponHelpers'
 
 export default function VendorTile({ vendor, href }) {
-  const hasActiveCoupon = isCouponActive(vendor.regular_coupon_text, vendor.regular_coupon_expiration)
+  const hasCoupon = hasActiveCoupon(vendor, 'regular')
 
   return (
     <Link
       href={href}
       className="group relative block w-full bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all"
     >
-      {hasActiveCoupon && (
+      {hasCoupon && (
         <span className="absolute top-2 right-2 z-10 bg-[#C9A227] text-[#141d33] text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full shadow">
           Coupon available
         </span>

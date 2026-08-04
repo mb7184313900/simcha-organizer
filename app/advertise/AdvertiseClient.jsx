@@ -25,9 +25,21 @@ export default function AdvertiseClient() {
   const [newCustomLocation, setNewCustomLocation] = useState('')
   const [logoFile, setLogoFile] = useState(null)
   const [flyerFile, setFlyerFile] = useState(null)
-  const [regularCouponText, setRegularCouponText] = useState('')
+  const [regularCouponPercentOff, setRegularCouponPercentOff] = useState(false)
+  const [regularCouponPercentValue, setRegularCouponPercentValue] = useState('')
+  const [regularCouponDollarOff, setRegularCouponDollarOff] = useState(false)
+  const [regularCouponDollarValue, setRegularCouponDollarValue] = useState('')
+  const [regularCouponSpecialOffer, setRegularCouponSpecialOffer] = useState('')
+  const [regularCouponTerms, setRegularCouponTerms] = useState('')
+  const [regularCouponCode, setRegularCouponCode] = useState('')
   const [regularCouponExpiration, setRegularCouponExpiration] = useState('')
-  const [exclusiveCouponText, setExclusiveCouponText] = useState('')
+  const [exclusiveCouponPercentOff, setExclusiveCouponPercentOff] = useState(false)
+  const [exclusiveCouponPercentValue, setExclusiveCouponPercentValue] = useState('')
+  const [exclusiveCouponDollarOff, setExclusiveCouponDollarOff] = useState(false)
+  const [exclusiveCouponDollarValue, setExclusiveCouponDollarValue] = useState('')
+  const [exclusiveCouponSpecialOffer, setExclusiveCouponSpecialOffer] = useState('')
+  const [exclusiveCouponTerms, setExclusiveCouponTerms] = useState('')
+  const [exclusiveCouponCode, setExclusiveCouponCode] = useState('')
   const [exclusiveCouponExpiration, setExclusiveCouponExpiration] = useState('')
   const [vendorNoteToAdmin, setVendorNoteToAdmin] = useState('')
   const [loading, setLoading] = useState(false)
@@ -176,9 +188,21 @@ export default function AdvertiseClient() {
           location: [...selectedLocations, ...customLocations].join(', '),
           logoUrl,
           flyerUrl,
-          regularCouponText,
+          regularCouponPercentOff,
+          regularCouponPercentValue,
+          regularCouponDollarOff,
+          regularCouponDollarValue,
+          regularCouponSpecialOffer,
+          regularCouponTerms,
+          regularCouponCode,
           regularCouponExpiration: regularCouponExpiration || null,
-          exclusiveCouponText,
+          exclusiveCouponPercentOff,
+          exclusiveCouponPercentValue,
+          exclusiveCouponDollarOff,
+          exclusiveCouponDollarValue,
+          exclusiveCouponSpecialOffer,
+          exclusiveCouponTerms,
+          exclusiveCouponCode,
           exclusiveCouponExpiration: exclusiveCouponExpiration || null,
           vendorNoteToAdmin,
           honeypot,
@@ -213,7 +237,6 @@ export default function AdvertiseClient() {
   const previewTileVendor = {
     name: name || 'Your Business Name',
     thumbnail_image_url: logoPreviewUrl,
-    regular_coupon_text: regularCouponText,
     regular_coupon_expiration: regularCouponExpiration,
   }
 
@@ -229,9 +252,7 @@ export default function AdvertiseClient() {
     website,
     instagram,
     ad_image_url: flyerPreviewUrl,
-    regular_coupon_text: regularCouponText,
     regular_coupon_expiration: regularCouponExpiration,
-    exclusive_coupon_text: exclusiveCouponText,
     exclusive_coupon_expiration: exclusiveCouponExpiration,
   }
 
@@ -431,15 +452,92 @@ export default function AdvertiseClient() {
               )}
             </div>
 
-            <div className="border border-gray-200 rounded-md p-4 space-y-2">
+            <div className="border border-gray-200 rounded-md p-4 space-y-3">
               <p className="text-sm font-semibold text-[#141d33]">Regular Coupon (visible to everyone)</p>
-              <input
-                type="text"
-                placeholder="Coupon text"
-                value={regularCouponText}
-                onChange={e => setRegularCouponText(e.target.value)}
-                className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-              />
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-[#141d33]">
+                  <input
+                    type="checkbox"
+                    checked={regularCouponPercentOff}
+                    onChange={e => setRegularCouponPercentOff(e.target.checked)}
+                  />
+                  Offer a percentage off
+                </label>
+                {regularCouponPercentOff && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-[#5a5a5a] mb-1">How much? (e.g. 10 for 10% off)</label>
+                    <input
+                      type="number"
+                      value={regularCouponPercentValue}
+                      onChange={e => setRegularCouponPercentValue(e.target.value)}
+                      className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-[#141d33]">
+                  <input
+                    type="checkbox"
+                    checked={regularCouponDollarOff}
+                    onChange={e => setRegularCouponDollarOff(e.target.checked)}
+                  />
+                  Offer a dollar amount off
+                </label>
+                {regularCouponDollarOff && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-[#5a5a5a] mb-1">How much? (e.g. 15 for $15 off)</label>
+                    <input
+                      type="number"
+                      value={regularCouponDollarValue}
+                      onChange={e => setRegularCouponDollarValue(e.target.value)}
+                      className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Special offer (optional)</label>
+                <p className="text-xs text-[#5a5a5a] mb-1">
+                  Use this for anything that doesn't fit above — like "Buy one get one free" or "Free upgrade with any package".
+                </p>
+                <input
+                  type="text"
+                  value={regularCouponSpecialOffer}
+                  onChange={e => setRegularCouponSpecialOffer(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Terms (optional)</label>
+                <p className="text-xs text-[#5a5a5a] mb-1">
+                  Any conditions for this offer, e.g. "Valid on purchases over $200" or "Weekends only".
+                </p>
+                <input
+                  type="text"
+                  value={regularCouponTerms}
+                  onChange={e => setRegularCouponTerms(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Coupon code (optional)</label>
+                <p className="text-xs text-[#5a5a5a] mb-1">
+                  Only needed if customers redeem this on your website at checkout.
+                </p>
+                <input
+                  type="text"
+                  value={regularCouponCode}
+                  onChange={e => setRegularCouponCode(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs text-[#5a5a5a] mb-1">Expiration date (optional)</label>
                 <input
@@ -451,18 +549,95 @@ export default function AdvertiseClient() {
               </div>
             </div>
 
-            <div className="border border-gray-200 rounded-md p-4 space-y-2">
+            <div className="border border-gray-200 rounded-md p-4 space-y-3">
               <p className="text-sm font-semibold text-[#141d33]">Exclusive Coupon (visible to paid SimchaPro members only)</p>
               <p className="text-xs text-[#5a5a5a]">
                 This coupon text will never be shown publicly — only a note that an exclusive offer exists.
               </p>
-              <input
-                type="text"
-                placeholder="Coupon text"
-                value={exclusiveCouponText}
-                onChange={e => setExclusiveCouponText(e.target.value)}
-                className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-              />
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-[#141d33]">
+                  <input
+                    type="checkbox"
+                    checked={exclusiveCouponPercentOff}
+                    onChange={e => setExclusiveCouponPercentOff(e.target.checked)}
+                  />
+                  Offer a percentage off
+                </label>
+                {exclusiveCouponPercentOff && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-[#5a5a5a] mb-1">How much? (e.g. 10 for 10% off)</label>
+                    <input
+                      type="number"
+                      value={exclusiveCouponPercentValue}
+                      onChange={e => setExclusiveCouponPercentValue(e.target.value)}
+                      className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-[#141d33]">
+                  <input
+                    type="checkbox"
+                    checked={exclusiveCouponDollarOff}
+                    onChange={e => setExclusiveCouponDollarOff(e.target.checked)}
+                  />
+                  Offer a dollar amount off
+                </label>
+                {exclusiveCouponDollarOff && (
+                  <div className="mt-2">
+                    <label className="block text-xs text-[#5a5a5a] mb-1">How much? (e.g. 15 for $15 off)</label>
+                    <input
+                      type="number"
+                      value={exclusiveCouponDollarValue}
+                      onChange={e => setExclusiveCouponDollarValue(e.target.value)}
+                      className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Special offer (optional)</label>
+                <p className="text-xs text-[#5a5a5a] mb-1">
+                  Use this for anything that doesn't fit above — like "Buy one get one free" or "Free upgrade with any package".
+                </p>
+                <input
+                  type="text"
+                  value={exclusiveCouponSpecialOffer}
+                  onChange={e => setExclusiveCouponSpecialOffer(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Terms (optional)</label>
+                <p className="text-xs text-[#5a5a5a] mb-1">
+                  Any conditions for this offer, e.g. "Valid on purchases over $200" or "Weekends only".
+                </p>
+                <input
+                  type="text"
+                  value={exclusiveCouponTerms}
+                  onChange={e => setExclusiveCouponTerms(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#5a5a5a] mb-1">Coupon code (optional)</label>
+                <p className="text-xs text-[#5a5a5a] mb-1">
+                  Only needed if customers redeem this on your website at checkout.
+                </p>
+                <input
+                  type="text"
+                  value={exclusiveCouponCode}
+                  onChange={e => setExclusiveCouponCode(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs text-[#5a5a5a] mb-1">Expiration date (optional)</label>
                 <input

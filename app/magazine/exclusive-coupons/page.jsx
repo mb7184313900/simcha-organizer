@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import Link from 'next/link'
+import { hasActiveCoupon, formatCouponText } from '../../../lib/couponHelpers'
 
 function formatDate(dateString) {
   if (!dateString) return null
@@ -15,12 +16,6 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric',
   })
-}
-
-function isCouponActive(text, expiration) {
-  if (!text) return false
-  if (!expiration) return true
-  return new Date(`${expiration}T23:59:59`).getTime() >= Date.now()
 }
 
 function CouponCard({ coupon }) {
@@ -89,9 +84,8 @@ export default function ExclusiveCouponsPage() {
             .order('created_at', { ascending: false }),
           supabase
             .from('magazine_vendors')
-            .select('id, name, category_id, thumbnail_image_url, exclusive_coupon_text, exclusive_coupon_expiration, created_at')
-            .eq('is_published', true)
-            .not('exclusive_coupon_text', 'is', null),
+            .select('id, name, category_id, thumbnail_image_url, exclusive_coupon_percent_off, exclusive_coupon_dollar_off, exclusive_coupon_special_offer, exclusive_coupon_terms, exclusive_coupon_code, exclusive_coupon_expiration, created_at')
+            .eq('is_published', true),
         ])
 
         const manualCoupons = (manualData || []).map((c) => ({
@@ -107,11 +101,11 @@ export default function ExclusiveCouponsPage() {
         }))
 
         const vendorCoupons = (vendorData || [])
-          .filter((v) => isCouponActive(v.exclusive_coupon_text, v.exclusive_coupon_expiration))
+          .filter((v) => hasActiveCoupon(v, 'exclusive'))
           .map((v) => ({
             id: `vendor-${v.id}`,
             vendor_name: v.name,
-            discount_description: v.exclusive_coupon_text,
+            discount_description: formatCouponText(v, 'exclusive'),
             coupon_code: null,
             expiration_date: v.exclusive_coupon_expiration,
             terms: null,

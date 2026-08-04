@@ -1,8 +1,4 @@
-function isCouponActive(text, expiration) {
-  if (!text) return false
-  if (!expiration) return true
-  return new Date(`${expiration}T23:59:59`).getTime() >= Date.now()
-}
+import { hasActiveCoupon, formatCouponText } from '../lib/couponHelpers'
 
 function whatsappLink(number) {
   const digitsOnly = number.replace(/\D/g, '')
@@ -19,8 +15,8 @@ export default function VendorDetailView({ vendor, onTrackStat, isPaidMember }) 
     if (onTrackStat) onTrackStat(vendor.id, statType)
   }
 
-  const hasRegularCoupon = isCouponActive(vendor.regular_coupon_text, vendor.regular_coupon_expiration)
-  const hasExclusiveCoupon = isCouponActive(vendor.exclusive_coupon_text, vendor.exclusive_coupon_expiration)
+  const hasRegularCoupon = hasActiveCoupon(vendor, 'regular')
+  const hasExclusiveCoupon = hasActiveCoupon(vendor, 'exclusive')
 
   return (
     <div className="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -56,14 +52,14 @@ export default function VendorDetailView({ vendor, onTrackStat, isPaidMember }) 
           {hasRegularCoupon && (
             <div className="mt-2 border-2 border-dashed border-[#C9A227] rounded-lg p-4 text-center">
               <p className="text-xs uppercase tracking-wide text-[#C9A227] font-medium mb-1">SimchaPro Member Coupon</p>
-              <p className="text-[#141d33] font-medium">{vendor.regular_coupon_text}</p>
+              <p className="text-[#141d33] font-medium">{formatCouponText(vendor, 'regular')}</p>
             </div>
           )}
 
           {hasExclusiveCoupon && isPaidMember && (
             <div className="mt-2 border-2 border-dashed border-[#C9A227] rounded-lg p-4 text-center">
               <p className="text-xs uppercase tracking-wide text-[#C9A227] font-medium mb-1">Exclusive Member Offer</p>
-              <p className="text-[#141d33] font-medium">{vendor.exclusive_coupon_text}</p>
+              <p className="text-[#141d33] font-medium">{formatCouponText(vendor, 'exclusive')}</p>
             </div>
           )}
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import Link from 'next/link'
+import { hasActiveCoupon, formatCouponText } from '../../../lib/couponHelpers'
 
 function formatDate(dateString) {
   if (!dateString) return null
@@ -14,12 +15,6 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric',
   })
-}
-
-function isCouponActive(text, expiration) {
-  if (!text) return false
-  if (!expiration) return true
-  return new Date(`${expiration}T23:59:59`).getTime() >= Date.now()
 }
 
 function CouponCard({ coupon }) {
@@ -79,9 +74,8 @@ export default function CouponsPage() {
           .order('created_at', { ascending: false }),
         supabase
           .from('magazine_vendors')
-          .select('id, name, category_id, thumbnail_image_url, regular_coupon_text, regular_coupon_expiration, created_at')
-          .eq('is_published', true)
-          .not('regular_coupon_text', 'is', null),
+          .select('id, name, category_id, thumbnail_image_url, regular_coupon_percent_off, regular_coupon_dollar_off, regular_coupon_special_offer, regular_coupon_terms, regular_coupon_code, regular_coupon_expiration, created_at')
+          .eq('is_published', true),
       ])
 
       const manualCoupons = (manualData || []).map((c) => ({
@@ -97,11 +91,11 @@ export default function CouponsPage() {
       }))
 
       const vendorCoupons = (vendorData || [])
-        .filter((v) => isCouponActive(v.regular_coupon_text, v.regular_coupon_expiration))
+        .filter((v) => hasActiveCoupon(v, 'regular'))
         .map((v) => ({
           id: `vendor-${v.id}`,
           vendor_name: v.name,
-          discount_description: v.regular_coupon_text,
+          discount_description: formatCouponText(v, 'regular'),
           coupon_code: null,
           expiration_date: v.regular_coupon_expiration,
           terms: null,
