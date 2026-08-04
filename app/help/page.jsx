@@ -142,9 +142,84 @@ function InvitingPartnerContent() {
   )
 }
 
+function ChecklistContent() {
+  return (
+    <>
+      <p className="mb-4">
+        Stay on top of every wedding to-do with a checklist built specifically for the details of a frum wedding.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">The 14 tabs</h3>
+      <p>
+        The checklist is organized into 14 tabs covering every stage of planning (venue, catering, clothing, and more), so you can focus on one area at a time.
+      </p>
+      <ScreenshotPlaceholder description="Checklist tab navigation" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Viewing vs. checking off items</h3>
+      <p className="mb-2">
+        <PaidFeatureBadge /> Checking and unchecking items is only available for paid members.
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Free members can view the full checklist across all 14 tabs</li>
+        <li>Paid members can check items off as they're completed</li>
+      </ul>
+
+      <NoteCallout>
+        Side A and Side B see the same list of items, but checking is individual to each side. When Side A checks off an item, it only shows as checked for Side A — Side B's copy of that same item stays unchecked, and vice versa. Each side tracks their own progress separately, even on shared items.
+      </NoteCallout>
+      <ScreenshotPlaceholder description="Same item shown checked on one side, unchecked on the other" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding a custom item</h3>
+      <p className="mb-2">
+        <PaidFeatureBadge />
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Go to the relevant tab</li>
+        <li>Click Add Item</li>
+        <li>Type in your custom item and save — it appears in that tab alongside the built-in items</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Removing an item from your list</h3>
+      <p className="mb-2">
+        <PaidFeatureBadge />
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Click the remove/delete icon next to any item you don't need</li>
+        <li>The item is not deleted — it moves to a Removed Items list</li>
+        <li>Chosson-side items can be removed by whichever side doesn't need them, and the same goes for Kallah-side items — each side can trim the list down to what's actually relevant to them</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Restoring a removed item</h3>
+      <p className="mb-2">
+        <PaidFeatureBadge />
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Go to Removed Items</li>
+        <li>Click Restore next to any item to bring it back to its original tab</li>
+      </ul>
+      <ScreenshotPlaceholder description="Removed Items list with Restore button" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding a date / countdown timer</h3>
+      <p className="mb-2">
+        <PaidFeatureBadge />
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Click on an item and add a target date</li>
+        <li>The item will show a countdown so you know how much time is left to complete it</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">PDF export</h3>
+      <p>
+        Click Export to PDF to download your checklist (navy/gold branded) — useful for printing or sharing with a vendor or family member.
+      </p>
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
+  'checklist': ChecklistContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
