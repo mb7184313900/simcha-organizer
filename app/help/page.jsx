@@ -411,6 +411,47 @@ function PaymentsContent() {
   )
 }
 
+function MagazineContent() {
+  return (
+    <>
+      <p className="mb-4">
+        A resource hub for wedding planning inspiration, vendor discovery, and exclusive deals.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Articles</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Browse articles covering wedding planning tips, inspiration, and guidance</li>
+        <li>No membership required to read</li>
+      </ul>
+      <ScreenshotPlaceholder description="Magazine articles feed" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Vendor Directory</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Browse vendors by category (photographers, halls, caterers, and more)</li>
+        <li>Tap a vendor to see their full listing: photos, description, and contact info</li>
+        <li>Tap-to-call, tap-to-WhatsApp, or visit their website directly from the listing</li>
+      </ul>
+      <ScreenshotPlaceholder description="Vendor Directory category tiles" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Coupons</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Browse general coupons and deals from vendors</li>
+        <li>Free to view for everyone</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Exclusive Coupons</h3>
+      <p className="mb-2">
+        <PaidFeatureBadge /> Exclusive Coupons are only available for paid members.
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>A separate section of deeper discounts and offers, visible only to paid members</li>
+        <li>A persistent banner reminds free members that Exclusive Coupons are available with a paid membership</li>
+      </ul>
+      <ScreenshotPlaceholder description="Exclusive Coupons banner for non-members" />
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
@@ -418,6 +459,7 @@ const SECTION_CONTENT = {
   'expense-tracker': ExpenseTrackerContent,
   'invite-system': InviteSystemContent,
   'payments': PaymentsContent,
+  'magazine': MagazineContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
