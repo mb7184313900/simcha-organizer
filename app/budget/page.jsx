@@ -758,7 +758,19 @@ export default function ExpenseTracker() {
       )}
 
       <div className="max-w-4xl mx-auto px-8 py-10">
-        <h2 className="text-3xl font-bold text-blue-900 mb-2">Expense Tracker 💰</h2>
+        <h2 className="text-3xl font-bold text-blue-900 mb-2 flex items-center gap-2">
+          <span>Expense Tracker 💰</span>
+          <a
+            href="/help#expense-tracker"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Get help with the Expense Tracker"
+            title="Get help with the Expense Tracker"
+            className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-[#C9A227] text-[#141d33] text-sm font-bold leading-none hover:opacity-80 hover:scale-110 transition-all"
+          >
+            ?
+          </a>
+        </h2>
         <p className="text-gray-500 mb-6">Track all your simcha expenses</p>
 
         {/* Read-only banner — edit access expired (1-year window passed, or trial ended) */}
