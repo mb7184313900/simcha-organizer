@@ -556,6 +556,68 @@ function DashboardContent() {
   )
 }
 
+function SectionLink({ sectionId, children }) {
+  return (
+    <a
+      href={`#${sectionId}`}
+      className="text-[#141d33] hover:text-[#C9A227] underline underline-offset-2 transition-colors"
+    >
+      {children}
+    </a>
+  )
+}
+
+function FaqItem({ question, children }) {
+  return (
+    <div>
+      <p className="font-semibold text-[#141d33] mb-1">{question}</p>
+      <p className="text-gray-600">{children}</p>
+    </div>
+  )
+}
+
+function FaqContent() {
+  return (
+    <>
+      <p className="mb-4">Quick answers to common questions.</p>
+
+      <div className="space-y-5">
+        <FaqItem question="Why can't I check off checklist items anymore?">
+          Checking off items requires a paid membership. If your free trial ended or your subscription lapsed, your account moves to view-only mode. Upgrading or renewing restores full editing access — nothing is lost in the meantime. (See <SectionLink sectionId="payments">Payments &amp; Renewals</SectionLink>.)
+        </FaqItem>
+
+        <FaqItem question="Why can't I edit my checklist even though I'm a paid member?">
+          If it's been more than a year since your wedding was created, editing switches to view-only as part of the one-year edit window. Your data is all still there — you just can't make changes past that point. (See <SectionLink sectionId="invite-system">Wedding Invite System</SectionLink>.)
+        </FaqItem>
+
+        <FaqItem question="I accidentally removed a checklist item — is it gone?">
+          No — removed checklist items move to Removed Items and can be restored anytime. (See <SectionLink sectionId="checklist">Simcha Checklist</SectionLink>.)
+        </FaqItem>
+
+        <FaqItem question="I deleted a vendor or payment in the Expense Tracker — can I get it back?">
+          Unfortunately no. Unlike the checklist, deleting a vendor or payment in the Expense Tracker is permanent. Always double-check before confirming a delete.
+        </FaqItem>
+
+        <FaqItem question="I don't see my partner's side's expenses or checklist progress.">
+          Make sure Side B has accepted the invite — if they haven't accepted yet, they won't be connected. Also remember: checklist checking is individual to each side (you won't see their checked items even once connected), while shared expenses do appear for both sides.
+        </FaqItem>
+
+        <FaqItem question="How do I log out?">
+          Click your profile icon and select Log Out.
+        </FaqItem>
+
+        <FaqItem question="I'm a vendor — how do I get listed in the Vendor Directory?">
+          Go to simchapro.com/advertise and submit your listing. See <SectionLink sectionId="vendor-submission">Vendor Self-Submission</SectionLink> for the full walkthrough.
+        </FaqItem>
+
+        <FaqItem question="Do I lose my data if my trial or subscription expires?">
+          No — your data is never deleted. Everything you've entered stays exactly as it is; only editing is paused until you upgrade or renew.
+        </FaqItem>
+      </div>
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
@@ -567,6 +629,7 @@ const SECTION_CONTENT = {
   'vendor-submission': VendorSubmissionContent,
   'account-settings': AccountSettingsContent,
   'dashboard': DashboardContent,
+  'faq': FaqContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
