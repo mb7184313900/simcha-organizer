@@ -28,9 +28,14 @@ function ScreenshotPlaceholder({ description }) {
   )
 }
 
-function NoteCallout({ children }) {
+function NoteCallout({ children, variant = 'gold' }) {
+  const variantClasses =
+    variant === 'warning'
+      ? 'bg-red-50 border-red-200 text-red-700'
+      : 'bg-[#C9A227]/10 border-[#C9A227]/30 text-[#141d33]'
+
   return (
-    <div className="my-3 bg-[#C9A227]/10 border border-[#C9A227]/30 rounded-lg px-4 py-3 text-sm text-[#141d33]">
+    <div className={`my-3 border rounded-lg px-4 py-3 text-sm ${variantClasses}`}>
       {children}
     </div>
   )
@@ -216,10 +221,79 @@ function ChecklistContent() {
   )
 }
 
+function ExpenseTrackerContent() {
+  return (
+    <>
+      <p className="mb-3">
+        Keep every wedding expense organized and clear — who's paying for what, and where the money's going.
+      </p>
+
+      <p className="mb-4">
+        <PaidFeatureBadge /> The entire Expense Tracker is only available for paid members.
+      </p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2">Shared vs. private expenses</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Shared expenses — visible to both Side A and Side B, useful for costs split between families</li>
+        <li>Private expenses — visible only to the side that entered them</li>
+        <li>Every expense is tagged by family side, so it's always clear who added what</li>
+      </ul>
+      <ScreenshotPlaceholder description="Expense entry with shared/private toggle" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Vendor management</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Add vendors you're working with (photographer, caterer, hall, etc.)</li>
+        <li>Track contact details and notes per vendor</li>
+        <li>Link expenses and payments to the relevant vendor</li>
+      </ul>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding a payment</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>On a vendor's page, go to Add Payment</li>
+        <li>Enter the amount, who paid, payment method, and optionally a due date or date paid</li>
+        <li>Click Add Payment</li>
+      </ul>
+      <ScreenshotPlaceholder description="Add Payment form" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding an additional charge</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>If a vendor adds an extra cost beyond their original amount (e.g. an overtime fee, an upgrade), go to Additional Charges on that vendor's page</li>
+        <li>Enter a description and the amount, then click Add Charge</li>
+        <li>This increases the vendor's total, separate from tracking payments</li>
+      </ul>
+      <ScreenshotPlaceholder description="Add Additional Charge form" />
+
+      <NoteCallout>
+        Payments and Additional Charges are tracked separately: Payments record money you've paid toward the vendor's total, while Additional Charges increase that total when a vendor adds a new cost.
+      </NoteCallout>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Check tracker</h3>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Keep a running record of checks written — check number, amount, date, and who it's made out to</li>
+        <li>If a check is post-dated, enter the future date — the tracker shows the due date and how many days remain until then, so you can plan for when funds need to be available</li>
+      </ul>
+      <ScreenshotPlaceholder description="Check tracker showing a post-dated check with days remaining" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Breakdown tab</h3>
+      <p>A summary view showing totals by category, so you can see the full financial picture at a glance.</p>
+      <ScreenshotPlaceholder description="Breakdown tab showing category totals" />
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">PDF export</h3>
+      <p>Click Export to PDF to download a navy/gold branded summary of your expenses.</p>
+
+      <h3 className="font-semibold text-[#141d33] mb-2 mt-4">⚠️ Important: deleting is permanent here</h3>
+      <NoteCallout variant="warning">
+        Unlike the Checklist (where removed items move to a Removed Items list and can be restored), deleting a vendor or payment in the Expense Tracker is permanent and cannot be undone. You'll be asked to confirm before anything is deleted.
+      </NoteCallout>
+    </>
+  )
+}
+
 const SECTION_CONTENT = {
   'getting-started': GettingStartedContent,
   'inviting-partner': InvitingPartnerContent,
   'checklist': ChecklistContent,
+  'expense-tracker': ExpenseTrackerContent,
 }
 
 function AccordionSection({ id, title, isOpen, onToggle }) {
