@@ -63,7 +63,19 @@ export default function MagazineClient() {
 
       <div className="max-w-5xl mx-auto px-6 py-14 flex-1 w-full">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-serif text-[#141d33] mb-3">Simcha Magazine</h1>
+          <h1 className="text-4xl font-serif text-[#141d33] mb-3 flex items-center justify-center gap-2">
+            <span>Simcha Magazine</span>
+            <a
+              href="/help#magazine"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Get help with Simcha Magazine"
+              title="Get help with Simcha Magazine"
+              className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-[#C9A227] text-[#141d33] text-sm font-bold leading-none hover:opacity-80 hover:scale-110 transition-all"
+            >
+              ?
+            </a>
+          </h1>
           <p className="text-gray-500 max-w-xl mx-auto">
             Articles, vendors, and exclusive offers to help you plan your simcha — all in one place.
           </p>
