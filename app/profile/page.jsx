@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { getAccessStatus } from '../../lib/accessControl'
+import { getAccessStatus, getMySide } from '../../lib/accessControl'
 import Footer from '../../components/Footer'
 import Image from 'next/image'
 
@@ -14,7 +14,7 @@ export default function WeddingProfile() {
   const [loading, setLoading] = useState(true)
   const [weddingRow, setWeddingRow] = useState(null)
   const [familySettings, setFamilySettings] = useState(null)
-  const [form, setForm] = useState({ chosson_family: '', kallah_family: '', wedding_name: '', wedding_date: '' })
+  const [form, setForm] = useState({ chosson_family: '', kallah_family: '', wedding_name: '', wedding_date: '', side_a_role: '' })
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const router = useRouter()
@@ -43,16 +43,41 @@ export default function WeddingProfile() {
       }
 
       const { data: wedding } = await supabase.from('weddings').select('*').eq('id', status.weddingId).maybeSingle()
-      setWeddingRow(wedding || null)
-      setForm({
-        chosson_family: wedding?.chosson_family || '',
-        kallah_family: wedding?.kallah_family || '',
-        wedding_name: wedding?.wedding_name || '',
-        wedding_date: wedding?.wedding_date || ''
-      })
-
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).eq('wedding_id', status.weddingId).maybeSingle()
       setFamilySettings(fs || null)
+
+      let resolvedWedding = wedding || null
+
+      // Backward compatibility: if side_a_role hasn't been set on the wedding yet
+      // but this user's own family_settings already has a my_side answer, derive
+      // it from that. Side A backfills it onto the wedding row (the new single
+      // source of truth); Side B can't write to weddings, so just derive locally.
+      if (resolvedWedding && !resolvedWedding.side_a_role && fs?.my_side) {
+        const derivedSideARole = status.isSideB
+          ? (fs.my_side === 'chosson' ? 'kallah' : 'chosson')
+          : fs.my_side
+
+        if (!status.isSideB) {
+          const { data: updatedWedding } = await supabase
+            .from('weddings')
+            .update({ side_a_role: derivedSideARole })
+            .eq('id', resolvedWedding.id)
+            .select()
+            .maybeSingle()
+          resolvedWedding = updatedWedding || { ...resolvedWedding, side_a_role: derivedSideARole }
+        } else {
+          resolvedWedding = { ...resolvedWedding, side_a_role: derivedSideARole }
+        }
+      }
+
+      setWeddingRow(resolvedWedding)
+      setForm({
+        chosson_family: resolvedWedding?.chosson_family || '',
+        kallah_family: resolvedWedding?.kallah_family || '',
+        wedding_name: resolvedWedding?.wedding_name || '',
+        wedding_date: resolvedWedding?.wedding_date || '',
+        side_a_role: resolvedWedding?.side_a_role || ''
+      })
 
       setLoading(false)
     }
@@ -65,6 +90,10 @@ export default function WeddingProfile() {
       alert('Please fill in both last names.')
       return
     }
+    if (!form.side_a_role) {
+      alert('Please select which side you are on.')
+      return
+    }
     setSaving(true)
 
     if (weddingRow) {
@@ -72,7 +101,8 @@ export default function WeddingProfile() {
         chosson_family: form.chosson_family.trim(),
         kallah_family: form.kallah_family.trim(),
         wedding_name: form.wedding_name.trim() || null,
-        wedding_date: form.wedding_date || null
+        wedding_date: form.wedding_date || null,
+        side_a_role: form.side_a_role
       }).eq('id', weddingRow.id)
     } else {
       await supabase.from('weddings').insert({
@@ -80,19 +110,21 @@ export default function WeddingProfile() {
         chosson_family: form.chosson_family.trim(),
         kallah_family: form.kallah_family.trim(),
         wedding_name: form.wedding_name.trim() || null,
-        wedding_date: form.wedding_date || null
+        wedding_date: form.wedding_date || null,
+        side_a_role: form.side_a_role
       })
     }
 
     // Keep Side A's own family_settings row (for this wedding) in sync with display names
     if (familySettings) {
-      const updatedMyName = familySettings.my_side === 'chosson' ? form.chosson_family.trim() : form.kallah_family.trim()
-      const updatedOtherName = familySettings.my_side === 'chosson' ? form.kallah_family.trim() : form.chosson_family.trim()
+      const updatedMyName = form.side_a_role === 'chosson' ? form.chosson_family.trim() : form.kallah_family.trim()
+      const updatedOtherName = form.side_a_role === 'chosson' ? form.kallah_family.trim() : form.chosson_family.trim()
       await supabase.from('family_settings').update({
+        my_side: form.side_a_role,
         my_family_name: updatedMyName,
         other_family_name: updatedOtherName
       }).eq('user_id', user.id).eq('wedding_id', weddingId)
-      setFamilySettings(prev => ({ ...prev, my_family_name: updatedMyName, other_family_name: updatedOtherName }))
+      setFamilySettings(prev => ({ ...prev, my_side: form.side_a_role, my_family_name: updatedMyName, other_family_name: updatedOtherName }))
     }
 
     const { data: refreshedWedding } = await supabase.from('weddings').select('*').eq('id', weddingId).maybeSingle()
@@ -107,6 +139,10 @@ export default function WeddingProfile() {
   const weddingDateDisplay = form.wedding_date
     ? new Date(form.wedding_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : ''
+
+  const mySideDisplay = form.side_a_role
+    ? (getMySide({ side_a_role: form.side_a_role }, isSideB) === 'chosson' ? "Chosson's Side" : "Kallah's Side")
+    : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -181,6 +217,32 @@ export default function WeddingProfile() {
           </div>
 
           <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Which side are you?</label>
+            {canEditProfile ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm(p => ({ ...p, side_a_role: 'chosson' }))}
+                  className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${form.side_a_role === 'chosson' ? 'border-blue-900 bg-blue-900 text-white' : 'border-gray-200 text-gray-600'}`}
+                >
+                  Chosson's Side
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(p => ({ ...p, side_a_role: 'kallah' }))}
+                  className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${form.side_a_role === 'kallah' ? 'border-blue-900 bg-blue-900 text-white' : 'border-gray-200 text-gray-600'}`}
+                >
+                  Kallah's Side
+                </button>
+              </div>
+            ) : (
+              <p className="text-gray-800 font-medium">
+                {mySideDisplay ? `You are on the ${mySideDisplay}` : 'Not set yet'}
+              </p>
+            )}
+          </div>
+
+          <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Wedding Name (optional)</label>
             {canEditProfile ? (
               <input
@@ -205,6 +267,9 @@ export default function WeddingProfile() {
               />
             ) : (
               <p className="text-gray-800 font-medium">{weddingDateDisplay || '—'}</p>
+            )}
+            {canEditProfile && (
+              <p className="text-xs text-gray-400 mt-1">Don't know the date yet? You can leave this blank and update it anytime.</p>
             )}
           </div>
 

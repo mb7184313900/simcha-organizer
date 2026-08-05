@@ -169,6 +169,15 @@ export default function Dashboard() {
           </div>
         )}
 
+        {wedding && !wedding.wedding_date && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-blue-700 text-sm">Add your wedding date to see the countdown here.</p>
+            <a href="/profile" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-800 whitespace-nowrap text-center">
+              Add Wedding Date
+            </a>
+          </div>
+        )}
+
         {wedding?.wedding_date && (
           <div className="bg-[#141d33] rounded-2xl shadow-sm p-8 mb-10 text-center border border-[#C9A227]/40">
             {weddingHasPassed ? (

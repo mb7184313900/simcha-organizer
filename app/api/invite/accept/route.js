@@ -35,19 +35,48 @@ export async function POST(req) {
       return Response.json({ error: 'Failed to update invite', detail: updateError.message }, { status: 500 })
     }
 
-    // Get owner's family settings for THIS specific wedding
-    const { data: ownerSettings, error: settingsError } = await supabase
+    // The wedding's side_a_role is the single source of truth for which side
+    // Side A is on. Fall back to the owner's family_settings.my_side only if
+    // side_a_role hasn't been set yet (e.g. an owner who hasn't visited
+    // Wedding Profile or the Expense Tracker setup under the new flow yet).
+    const { data: weddingRow } = await supabase
+      .from('weddings')
+      .select('side_a_role, chosson_family, kallah_family')
+      .eq('id', invite.wedding_id)
+      .maybeSingle()
+
+    const { data: ownerSettings } = await supabase
       .from('family_settings')
       .select('*')
       .eq('user_id', invite.owner_user_id)
       .eq('wedding_id', invite.wedding_id)
-      .single()
+      .maybeSingle()
 
-    if (settingsError || !ownerSettings) {
-      return Response.json({ error: 'Owner settings not found', detail: settingsError?.message }, { status: 500 })
+    const sideARole = weddingRow?.side_a_role || ownerSettings?.my_side || null
+
+    if (!sideARole) {
+      return Response.json(
+        { error: 'Wedding setup not found — the wedding owner needs to set up their wedding info first.' },
+        { status: 500 }
+      )
     }
 
-    const sideBSide = ownerSettings.my_side === 'chosson' ? 'kallah' : 'chosson'
+    const sideBSide = sideARole === 'chosson' ? 'kallah' : 'chosson'
+
+    // Side B's own family name / the owner's family name, from Side B's perspective.
+    const myFamilyName = ownerSettings
+      ? ownerSettings.other_family_name
+      : (sideBSide === 'chosson' ? weddingRow?.chosson_family : weddingRow?.kallah_family) || null
+
+    const otherFamilyName = ownerSettings
+      ? ownerSettings.my_family_name
+      : (sideBSide === 'chosson' ? weddingRow?.kallah_family : weddingRow?.chosson_family) || null
+
+    // Backfill side_a_role onto the wedding row if we had to derive it from
+    // the legacy family_settings.my_side above.
+    if (!weddingRow?.side_a_role) {
+      await supabase.from('weddings').update({ side_a_role: sideARole }).eq('id', invite.wedding_id)
+    }
 
     // Check if Side B already has family settings for THIS specific wedding
     const { data: existing } = await supabase
@@ -60,20 +89,20 @@ export async function POST(req) {
     if (existing) {
       await supabase.from('family_settings').update({
         my_side: sideBSide,
-        my_family_name: ownerSettings.other_family_name,
-        other_family_name: ownerSettings.my_family_name,
-        custom_categories: ownerSettings.custom_categories,
-        custom_occasions: ownerSettings.custom_occasions
+        my_family_name: myFamilyName,
+        other_family_name: otherFamilyName,
+        custom_categories: ownerSettings?.custom_categories,
+        custom_occasions: ownerSettings?.custom_occasions
       }).eq('user_id', userId).eq('wedding_id', invite.wedding_id)
     } else {
       const { error: insertError } = await supabase.from('family_settings').insert({
         user_id: userId,
         wedding_id: invite.wedding_id,
         my_side: sideBSide,
-        my_family_name: ownerSettings.other_family_name,
-        other_family_name: ownerSettings.my_family_name,
-        custom_categories: ownerSettings.custom_categories,
-        custom_occasions: ownerSettings.custom_occasions
+        my_family_name: myFamilyName,
+        other_family_name: otherFamilyName,
+        custom_categories: ownerSettings?.custom_categories,
+        custom_occasions: ownerSettings?.custom_occasions
       })
       if (insertError) {
         return Response.json({ error: 'Failed to create family settings', detail: insertError.message }, { status: 500 })
@@ -112,7 +141,7 @@ export async function POST(req) {
       if (ownerAuthError || !ownerAuthData?.user?.email) {
         console.error('Failed to look up owner email for acceptance notification:', ownerAuthError?.message)
       } else {
-        const sideBDisplayName = ownerSettings.other_family_name || invite.invited_email
+        const sideBDisplayName = myFamilyName || invite.invited_email
         await sendSideBAcceptedEmail(ownerAuthData.user.email, sideBDisplayName)
       }
     } catch (emailErr) {

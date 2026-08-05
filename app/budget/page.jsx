@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { getAccessStatus, setActiveWedding } from '../../lib/accessControl'
+import { getAccessStatus, setActiveWedding, getMySide } from '../../lib/accessControl'
 import Footer from '../../components/Footer'
 import Image from 'next/image'
 
@@ -66,6 +66,7 @@ export default function ExpenseTracker() {
   const loadWeddingInfo = async (wId) => {
     const { data } = await supabase.from('weddings').select('*').eq('id', wId).maybeSingle()
     setWeddingInfo(data || null)
+    return data || null
   }
 
   useEffect(() => {
@@ -83,15 +84,57 @@ export default function ExpenseTracker() {
         return
       }
 
+      let wedding = null
       if (status.weddingId) {
-        await loadWeddingInfo(status.weddingId)
+        wedding = await loadWeddingInfo(status.weddingId)
       }
+
+      // The wedding is considered "already set up" (via Wedding Profile) once
+      // its core required fields exist — side_a_role plus both family names.
+      // wedding_name/wedding_date stay optional and don't gate this.
+      const weddingAlreadySetUp = Boolean(wedding?.side_a_role && wedding?.chosson_family && wedding?.kallah_family)
 
       const { data: fs } = await supabase.from('family_settings').select('*').eq('user_id', user.id).eq('wedding_id', status.weddingId).maybeSingle()
       if (fs) {
         setFamilySettings(fs)
         if (fs.custom_categories) setCustomCategories(JSON.parse(fs.custom_categories))
         if (fs.custom_occasions) setCustomOccasions(JSON.parse(fs.custom_occasions))
+
+        // Backward compatibility: if side_a_role hasn't been set on the wedding
+        // yet but this user's family_settings already has a my_side answer,
+        // backfill it (Side A only — Side B can't write to the weddings table).
+        if (wedding && !wedding.side_a_role && fs.my_side && !status.isSideB) {
+          await supabase.from('weddings').update({ side_a_role: fs.my_side }).eq('id', wedding.id)
+          setWeddingInfo(prev => (prev ? { ...prev, side_a_role: fs.my_side } : prev))
+        }
+
+        if (status.isSideB) {
+          if (status.state === 'revoked') {
+            await loadVendors(user.id, status.weddingId)
+          } else {
+            await loadVendorsSideB(user.id, status.ownerUserId, status.weddingId)
+          }
+        } else {
+          await loadVendors(user.id, status.weddingId)
+        }
+      } else if (weddingAlreadySetUp) {
+        // Wedding info was already entered via Wedding Profile — silently create
+        // this user's family_settings row from that data instead of showing the
+        // "Welcome to Expense Tracker" setup modal again.
+        const mySide = getMySide(wedding, status.isSideB)
+        const myFamilyName = mySide === 'chosson' ? wedding.chosson_family : wedding.kallah_family
+        const otherFamilyName = mySide === 'chosson' ? wedding.kallah_family : wedding.chosson_family
+
+        const { data: newFs } = await supabase.from('family_settings').insert({
+          user_id: user.id,
+          wedding_id: status.weddingId,
+          my_side: mySide,
+          my_family_name: myFamilyName,
+          other_family_name: otherFamilyName
+        }).select().maybeSingle()
+
+        setFamilySettings(newFs || null)
+
         if (status.isSideB) {
           if (status.state === 'revoked') {
             await loadVendors(user.id, status.weddingId)
@@ -102,6 +145,13 @@ export default function ExpenseTracker() {
           await loadVendors(user.id, status.weddingId)
         }
       } else {
+        // Edge case: Side B reaching this modal at all (their family_settings is
+        // normally auto-created at invite-accept or via the branch above). If the
+        // wedding's side already known, pre-fill it so they can never end up
+        // saving the wrong side even though the picker is hidden from them below.
+        if (status.isSideB && wedding?.side_a_role) {
+          setSetupForm(p => ({ ...p, my_side: getMySide(wedding, true) }))
+        }
         setShowFamilySetup(true)
       }
       setLoading(false)
@@ -121,7 +171,8 @@ export default function ExpenseTracker() {
         chosson_family: setupForm.my_side === 'chosson' ? setupForm.my_family_name : setupForm.other_family_name,
         kallah_family: setupForm.my_side === 'kallah' ? setupForm.my_family_name : setupForm.other_family_name,
         wedding_name: setupForm.wedding_name || null,
-        wedding_date: setupForm.wedding_date || null
+        wedding_date: setupForm.wedding_date || null,
+        side_a_role: setupForm.my_side
       }).select().single()
       currentWeddingId = newWedding.id
       setWeddingId(currentWeddingId)
@@ -134,7 +185,8 @@ export default function ExpenseTracker() {
         chosson_family: setupForm.my_side === 'chosson' ? setupForm.my_family_name : setupForm.other_family_name,
         kallah_family: setupForm.my_side === 'kallah' ? setupForm.my_family_name : setupForm.other_family_name,
         wedding_name: setupForm.wedding_name || null,
-        wedding_date: setupForm.wedding_date || null
+        wedding_date: setupForm.wedding_date || null,
+        side_a_role: setupForm.my_side
       }).eq('id', currentWeddingId)
       await loadWeddingInfo(currentWeddingId)
     }
@@ -698,10 +750,18 @@ export default function ExpenseTracker() {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-2 block">Which side are you?</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setSetupForm(p => ({ ...p, my_side: 'chosson' }))} className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${setupForm.my_side === 'chosson' ? 'border-blue-900 bg-blue-900 text-white' : 'border-gray-200 text-gray-600'}`}>Chosson's Side</button>
-              <button onClick={() => setSetupForm(p => ({ ...p, my_side: 'kallah' }))} className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${setupForm.my_side === 'kallah' ? 'border-blue-900 bg-blue-900 text-white' : 'border-gray-200 text-gray-600'}`}>Kallah's Side</button>
-            </div>
+            {!isSideB ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setSetupForm(p => ({ ...p, my_side: 'chosson' }))} className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${setupForm.my_side === 'chosson' ? 'border-blue-900 bg-blue-900 text-white' : 'border-gray-200 text-gray-600'}`}>Chosson's Side</button>
+                <button onClick={() => setSetupForm(p => ({ ...p, my_side: 'kallah' }))} className={`py-3 rounded-lg border-2 font-semibold text-sm transition-all ${setupForm.my_side === 'kallah' ? 'border-blue-900 bg-blue-900 text-white' : 'border-gray-200 text-gray-600'}`}>Kallah's Side</button>
+              </div>
+            ) : (
+              <p className="text-gray-800 font-medium">
+                {weddingInfo?.side_a_role
+                  ? `You are on the ${getMySide(weddingInfo, true) === 'chosson' ? "Chosson's Side" : "Kallah's Side"}`
+                  : "Determined automatically based on the wedding owner's side."}
+              </p>
+            )}
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Your Family Name</label>
@@ -718,6 +778,7 @@ export default function ExpenseTracker() {
           <div>
             <label className="text-sm font-semibold text-gray-700 mb-1 block">Wedding Date (optional)</label>
             <input type="date" value={setupForm.wedding_date} onChange={e => setSetupForm(p => ({ ...p, wedding_date: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <p className="text-xs text-gray-400 mt-1">Don't know the date yet? You can leave this blank and update it anytime.</p>
           </div>
           <button onClick={saveFamilySettings} className="w-full bg-blue-900 text-white py-3 rounded-lg font-bold hover:bg-blue-800">Get Started</button>
         </div>
