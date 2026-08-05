@@ -127,6 +127,16 @@ export default function ExpenseTracker() {
       setWeddingId(currentWeddingId)
       await setActiveWedding(user, currentWeddingId)
       await loadWeddingInfo(currentWeddingId)
+    } else if (!isSideB && currentWeddingId) {
+      // Wedding row already exists (e.g. created blank at signup) — update it with
+      // the family/wedding info entered here, same as /profile's handleSave().
+      await supabase.from('weddings').update({
+        chosson_family: setupForm.my_side === 'chosson' ? setupForm.my_family_name : setupForm.other_family_name,
+        kallah_family: setupForm.my_side === 'kallah' ? setupForm.my_family_name : setupForm.other_family_name,
+        wedding_name: setupForm.wedding_name || null,
+        wedding_date: setupForm.wedding_date || null
+      }).eq('id', currentWeddingId)
+      await loadWeddingInfo(currentWeddingId)
     }
 
     const { data } = await supabase.from('family_settings').insert({
