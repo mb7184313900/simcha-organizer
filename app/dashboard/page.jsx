@@ -85,7 +85,19 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-5xl mx-auto px-8 py-12">
-        <h2 className="text-3xl font-bold text-blue-900 mb-2">Welcome to SimchaPro! 🎉</h2>
+        <h2 className="text-3xl font-bold text-blue-900 mb-2 flex items-center gap-2">
+          <span>Welcome to SimchaPro! 🎉</span>
+          <a
+            href="/help#dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Get help with the Dashboard"
+            title="Get help with the Dashboard"
+            className="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full bg-[#C9A227] text-[#141d33] text-sm font-bold leading-none hover:opacity-80 hover:scale-110 transition-all"
+          >
+            ?
+          </a>
+        </h2>
 
         {typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('payment') === 'success' && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-green-700 font-medium">
