@@ -238,7 +238,7 @@ function ExpenseTrackerContent() {
         <li>Private expenses — visible only to the side that entered them</li>
         <li>Every expense is tagged by family side, so it's always clear who added what</li>
       </ul>
-      <ScreenshotPlaceholder description="Expense entry with shared/private toggle" />
+      <img src="/help-screenshots/expense-shared-private.png" alt="Add Vendor form showing shared/private expense toggle" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Vendor management</h3>
       <ul className="list-disc pl-5 space-y-1">
