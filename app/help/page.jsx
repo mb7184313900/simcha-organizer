@@ -321,7 +321,7 @@ function InviteSystemContent() {
       <NoteCallout>
         This one-year window applies to editing generally, separate from trial/subscription status — see "Payments &amp; Renewals" for how those interact.
       </NoteCallout>
-      <ScreenshotPlaceholder description="View-only banner after 1-year mark" />
+      <img src="/help-screenshots/view-only-editing.png" alt="View-only mode banner after edit access expires" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
     </>
   )
 }
@@ -406,7 +406,7 @@ function PaymentsContent() {
       <NoteCallout>
         Your data is never deleted when access expires — it's all still there, waiting for you.
       </NoteCallout>
-      <ScreenshotPlaceholder description="View-only mode banner with upgrade prompt" />
+      <img src="/help-screenshots/view-only-banner.png" alt="Trial ended banner with upgrade prompt" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
     </>
   )
 }
