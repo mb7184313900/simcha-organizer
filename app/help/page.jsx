@@ -78,7 +78,7 @@ function GettingStartedContent() {
         <li>Side A is whoever creates the wedding first (the "owner" of that wedding's account)</li>
         <li>Side B is the other family, invited in afterward by Side A</li>
       </ul>
-      <ScreenshotPlaceholder description="Dashboard showing Side A/Side B labels" />
+      <img src="/help-screenshots/my-weddings.png" alt="My Weddings page showing Owner (Side A) label" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <NoteCallout>
         📌 Only Side A can create the wedding and manage the subscription. Side B joins by invitation — see the "Inviting Your Partner's Side" section below.
