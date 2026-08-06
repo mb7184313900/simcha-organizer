@@ -303,7 +303,7 @@ function InviteSystemContent() {
         <li>Side B clicks the link, creates or logs into their SimchaPro account, and confirms</li>
         <li>Once accepted, Side A receives a "Mazel Tov!" notification, and Side B gets connected access to the wedding</li>
       </ol>
-      <ScreenshotPlaceholder description="Invite acceptance flow" />
+      <img src="/help-screenshots/invite-accept.png" alt="Branded invite email with Accept Invitation button" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">If Side B declines or doesn't respond</h3>
       <ul className="list-disc pl-5 space-y-1">
