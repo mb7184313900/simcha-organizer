@@ -135,7 +135,7 @@ function InvitingPartnerContent() {
         <li>Private expenses — visible only to the side that entered them</li>
       </ul>
       <p>Every expense is tagged by family side, so it's always clear who added what.</p>
-      <ScreenshotPlaceholder description="Expense entry showing shared/private toggle" />
+      <img src="/help-screenshots/shared-expenses.png" alt="Shared Expenses tab showing family split" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Revoking and reinstating Side B's access</h3>
       <ul className="list-disc pl-5 space-y-1">
