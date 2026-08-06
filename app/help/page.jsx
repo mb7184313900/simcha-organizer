@@ -172,7 +172,7 @@ function ChecklistContent() {
       <NoteCallout>
         Side A and Side B see the same list of items, but checking is individual to each side. When Side A checks off an item, it only shows as checked for Side A — Side B's copy of that same item stays unchecked, and vice versa. Each side tracks their own progress separately, even on shared items.
       </NoteCallout>
-      <ScreenshotPlaceholder description="Same item shown checked on one side, unchecked on the other" />
+      <img src="/help-screenshots/checklist-checking.png" alt="Checklist items checked off" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding a custom item</h3>
       <p className="mb-2">
