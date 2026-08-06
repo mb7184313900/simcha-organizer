@@ -70,7 +70,7 @@ function GettingStartedContent() {
         <li>Enter the wedding name and wedding date</li>
         <li>This starts your 7-day free trial — full access to explore the Checklist, Expense Tracker, and everything else, no payment required upfront</li>
       </ul>
-      <ScreenshotPlaceholder description="New Wedding creation screen" />
+      <img src="/help-screenshots/wedding-profile.png" alt="Wedding Profile setup screen" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Understanding Side A and Side B</h3>
       <p className="mb-2">SimchaPro is built for both families to plan together:</p>
