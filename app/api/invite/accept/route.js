@@ -25,6 +25,12 @@ export async function POST(req) {
       return Response.json({ error: 'Invite not found', detail: inviteError?.message }, { status: 404 })
     }
 
+    // Captured before we overwrite status below — lets us skip re-sending the
+    // "Side B accepted" notification on a repeat call (double-click, page
+    // revisited while still holding the same session) without changing any
+    // of the idempotent re-upsert behavior for the rest of this function.
+    const wasAlreadyAccepted = invite.status === 'accepted'
+
     // Mark invite as accepted
     const { error: updateError } = await supabase.from('wedding_invites').update({
       status: 'accepted',
@@ -134,19 +140,23 @@ export async function POST(req) {
       // Not fatal — invite acceptance still succeeds even if this fails
     }
 
-    // Notify Side A that Side B has accepted the invite
-    try {
-      const { data: ownerAuthData, error: ownerAuthError } = await supabase.auth.admin.getUserById(invite.owner_user_id)
+    // Notify Side A that Side B has accepted the invite — skip on a repeat
+    // call (invite was already accepted before this request) so Side A
+    // doesn't get a duplicate notification.
+    if (!wasAlreadyAccepted) {
+      try {
+        const { data: ownerAuthData, error: ownerAuthError } = await supabase.auth.admin.getUserById(invite.owner_user_id)
 
-      if (ownerAuthError || !ownerAuthData?.user?.email) {
-        console.error('Failed to look up owner email for acceptance notification:', ownerAuthError?.message)
-      } else {
-        const sideBDisplayName = myFamilyName || invite.invited_email
-        await sendSideBAcceptedEmail(ownerAuthData.user.email, sideBDisplayName)
+        if (ownerAuthError || !ownerAuthData?.user?.email) {
+          console.error('Failed to look up owner email for acceptance notification:', ownerAuthError?.message)
+        } else {
+          const sideBDisplayName = myFamilyName || invite.invited_email
+          await sendSideBAcceptedEmail(ownerAuthData.user.email, sideBDisplayName)
+        }
+      } catch (emailErr) {
+        console.error('Failed to send Side B accepted notification email:', emailErr.message)
+        // Not fatal — invite acceptance still succeeds even if this fails
       }
-    } catch (emailErr) {
-      console.error('Failed to send Side B accepted notification email:', emailErr.message)
-      // Not fatal — invite acceptance still succeeds even if this fails
     }
 
     return Response.json({ success: true })

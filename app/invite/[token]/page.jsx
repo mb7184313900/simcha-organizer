@@ -11,9 +11,10 @@ export default function InvitePage() {
   const router = useRouter()
   const [invite, setInvite] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ email: '', password: '' })
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', password: '', confirmPassword: '' })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -38,52 +39,77 @@ export default function InvitePage() {
 
   const handleSubmit = async () => {
     setError('')
+
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      setError('Please enter your first and last name.')
+      return
+    }
+    if (!form.phone.trim()) {
+      setError('Please enter your phone number.')
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
     setSubmitting(true)
     try {
-      let userId
-
-      // First try to sign in
+      // First try to sign in — the invited person may already have a
+      // SimchaPro account (e.g. Side A on their own wedding elsewhere).
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: form.email,
         password: form.password
       })
 
-      if (signInError) {
-        // Try to create a new account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password
+      if (!signInError) {
+        // Existing, already-confirmed account — nothing to verify by email.
+        // Accept the invite immediately, same as before this change.
+        const userId = signInData.user.id
+
+        const res = await fetch('/api/invite/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, inviteToken: token })
         })
-        if (signUpError) {
-          setError(signUpError.message)
+
+        const result = await res.json()
+        if (!result.success) {
+          setError('Something went wrong. Please try again.')
           setSubmitting(false)
           return
         }
-        userId = signUpData.user?.id || signUpData.session?.user?.id
-        if (!userId) {
-          setError('Account created! Please try signing in now.')
-          setSubmitting(false)
-          return
-        }
-      } else {
-        userId = signInData.user.id
+
+        router.push('/dashboard')
+        return
       }
 
-      // Call server API to accept invite and create family settings using service role
-      const res = await fetch('/api/invite/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, inviteToken: token })
+      // No existing account (or wrong password) — create a new one. This
+      // triggers Supabase's email confirmation flow; the invite itself is
+      // only accepted once they confirm and land on /auth/confirm.
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+            first_name: form.firstName.trim(),
+            last_name: form.lastName.trim(),
+            phone: form.phone.trim(),
+            invite_token: token
+          },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`
+        }
       })
 
-      const result = await res.json()
-      if (!result.success) {
-        setError('Something went wrong. Please try again.')
+      if (signUpError) {
+        setError(signUpError.message)
         setSubmitting(false)
         return
       }
 
-      router.push('/dashboard')
+      setSubmitted(true)
+      setSubmitting(false)
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setSubmitting(false)
@@ -117,6 +143,30 @@ export default function InvitePage() {
     </div>
   )
 
+  if (submitted) return (
+    <div className="min-h-screen bg-[#FAF7F0] flex flex-col">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <a href="/" className="mb-6">
+          <Image
+            src="/images/logo.png"
+            alt="SimchaPro"
+            width={160}
+            height={230}
+            priority
+            className="h-16 w-auto"
+          />
+        </a>
+        <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-sm border border-[#e8e0cc] text-center">
+          <h1 className="font-serif text-2xl font-semibold text-[#141d33] mb-2">Check Your Email</h1>
+          <p className="text-[#5a5a5a]">
+            We've sent a confirmation link to <strong>{form.email}</strong>. Please check your inbox and click the link to activate your account and join the wedding.
+          </p>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  )
+
   const chossonFamily = invite.owner_side === 'chosson' ? invite.owner_family_name : invite.other_family_name
   const kallahFamily = invite.owner_side === 'kallah' ? invite.owner_family_name : invite.other_family_name
 
@@ -144,17 +194,45 @@ export default function InvitePage() {
 
           <div className="space-y-3">
             <input
+              type="text"
+              placeholder="First name"
+              value={form.firstName}
+              onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            />
+            <input
+              type="text"
+              placeholder="Last name"
+              value={form.lastName}
+              onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            />
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            />
+            <input
               type="email"
               placeholder="Email address"
               value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+              readOnly
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
             />
             <input
               type="password"
               placeholder="Password"
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            />
+            <input
+              type="password"
+              placeholder="Confirm password"
+              value={form.confirmPassword}
+              onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
               className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
