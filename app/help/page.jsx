@@ -110,7 +110,7 @@ function InvitingPartnerContent() {
         <li>Click Send Invite</li>
         <li>They'll receive a branded email invitation to join</li>
       </ul>
-      <ScreenshotPlaceholder description="Invite page — enter email screen" />
+      <img src="/help-screenshots/invite-panel.png" alt="Other Family Access invite panel" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">What happens after you send the invite</h3>
       <ul className="list-disc pl-5 space-y-1 mb-4">
