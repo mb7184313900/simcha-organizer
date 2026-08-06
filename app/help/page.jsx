@@ -202,7 +202,7 @@ function ChecklistContent() {
         <li>Go to Removed Items</li>
         <li>Click Restore next to any item to bring it back to its original tab</li>
       </ul>
-      <ScreenshotPlaceholder description="Removed Items list with Restore button" />
+      <img src="/help-screenshots/checklist-removed.png" alt="Removed Items list with Restore button" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding a date / countdown timer</h3>
       <p className="mb-2">
