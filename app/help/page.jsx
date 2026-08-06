@@ -253,7 +253,7 @@ function ExpenseTrackerContent() {
         <li>Enter the amount, who paid, payment method, and optionally a due date or date paid</li>
         <li>Click Add Payment</li>
       </ul>
-      <ScreenshotPlaceholder description="Add Payment form" />
+      <img src="/help-screenshots/add-payment.png" alt="Add Payment form" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding an additional charge</h3>
       <ul className="list-disc pl-5 space-y-1">
