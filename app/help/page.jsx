@@ -272,11 +272,11 @@ function ExpenseTrackerContent() {
         <li>Keep a running record of checks written — check number, amount, date, and who it's made out to</li>
         <li>If a check is post-dated, enter the future date — the tracker shows the due date and how many days remain until then, so you can plan for when funds need to be available</li>
       </ul>
-      <ScreenshotPlaceholder description="Check tracker showing a post-dated check with days remaining" />
+      <img src="/help-screenshots/check-tracker.png" alt="Check tracker with post-dated check" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Breakdown tab</h3>
       <p>A summary view showing totals by category, so you can see the full financial picture at a glance.</p>
-      <ScreenshotPlaceholder description="Breakdown tab showing category totals" />
+      <img src="/help-screenshots/breakdown-tab.png" alt="Breakdown tab showing category totals" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">PDF export</h3>
       <p>Click Export to PDF to download a navy/gold branded summary of your expenses.</p>
@@ -423,7 +423,7 @@ function MagazineContent() {
         <li>Browse articles covering wedding planning tips, inspiration, and guidance</li>
         <li>No membership required to read</li>
       </ul>
-      <ScreenshotPlaceholder description="Magazine articles feed" />
+      <img src="/help-screenshots/magazine-articles.png" alt="Magazine articles feed" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Vendor Directory</h3>
       <ul className="list-disc pl-5 space-y-1">
@@ -431,7 +431,7 @@ function MagazineContent() {
         <li>Tap a vendor to see their full listing: photos, description, and contact info</li>
         <li>Tap-to-call, tap-to-WhatsApp, or visit their website directly from the listing</li>
       </ul>
-      <ScreenshotPlaceholder description="Vendor Directory category tiles" />
+      <img src="/help-screenshots/vendor-directory.png" alt="Vendor Directory category tiles" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Coupons</h3>
       <ul className="list-disc pl-5 space-y-1">
@@ -447,7 +447,7 @@ function MagazineContent() {
         <li>A separate section of deeper discounts and offers, visible only to paid members</li>
         <li>A persistent banner reminds free members that Exclusive Coupons are available with a paid membership</li>
       </ul>
-      <ScreenshotPlaceholder description="Exclusive Coupons banner for non-members" />
+      <img src="/help-screenshots/exclusive-coupons.png" alt="Exclusive Coupons banner for non-members" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
     </>
   )
 }
@@ -472,14 +472,14 @@ function VendorSubmissionContent() {
         <li>Add a note to our team if there's anything specific you'd like us to know</li>
         <li>Submit — your listing goes into our review queue</li>
       </ul>
-      <ScreenshotPlaceholder description="/advertise submission form" />
+      <img src="/help-screenshots/advertise-form.png" alt="Vendor advertise submission form" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Adding coupons to your listing</h3>
       <ul className="list-disc pl-5 space-y-1">
         <li>You can include a Regular Coupon, an Exclusive Coupon (or both), each with its own expiration date</li>
         <li>Exclusive Coupons are shown only to SimchaPro's paid members — a great way to stand out to serious, engaged customers</li>
       </ul>
-      <ScreenshotPlaceholder description="Coupon fields on the submission form" />
+      <img src="/help-screenshots/advertise-coupons.png" alt="Coupon fields on the advertise form" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">What happens after you submit</h3>
       <ul className="list-disc pl-5 space-y-1">
@@ -523,7 +523,7 @@ function AccountSettingsContent() {
         <li>Each wedding has its own separate Checklist, Expense Tracker, and trial/subscription status</li>
         <li>Switch between weddings from the My Weddings page at any time</li>
       </ul>
-      <ScreenshotPlaceholder description="My Weddings page with multiple wedding cards" />
+      <img src="/help-screenshots/my-weddings-multiple.png" alt="My Weddings page with multiple weddings" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Logging out</h3>
       <ul className="list-disc pl-5 space-y-1">
@@ -545,13 +545,13 @@ function DashboardContent() {
         <li>As soon as you set a wedding date, your Dashboard shows a live countdown of days remaining until the big day</li>
         <li>This updates automatically — no need to refresh or recalculate anything</li>
       </ul>
-      <ScreenshotPlaceholder description="Dashboard countdown display" />
+      <img src="/help-screenshots/dashboard-countdown.png" alt="Dashboard wedding countdown" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">At-a-glance overview</h3>
       <ul className="list-disc pl-5 space-y-1">
         <li>Quick snapshot of your wedding's progress — a jumping-off point to the Checklist, Expense Tracker, and other tools</li>
       </ul>
-      <ScreenshotPlaceholder description="Full Dashboard view" />
+      <img src="/help-screenshots/dashboard-full.png" alt="Full Dashboard view" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
     </>
   )
 }
