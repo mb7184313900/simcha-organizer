@@ -158,7 +158,7 @@ function ChecklistContent() {
       <p>
         The checklist is organized into 14 tabs covering every stage of planning (venue, catering, clothing, and more), so you can focus on one area at a time.
       </p>
-      <ScreenshotPlaceholder description="Checklist tab navigation" />
+      <img src="/help-screenshots/checklist-tabs.png" alt="Checklist tab navigation" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <h3 className="font-semibold text-[#141d33] mb-2 mt-4">Viewing vs. checking off items</h3>
       <p className="mb-2">
