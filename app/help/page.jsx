@@ -261,7 +261,7 @@ function ExpenseTrackerContent() {
         <li>Enter a description and the amount, then click Add Charge</li>
         <li>This increases the vendor's total, separate from tracking payments</li>
       </ul>
-      <ScreenshotPlaceholder description="Add Additional Charge form" />
+      <img src="/help-screenshots/add-charge.png" alt="Add Additional Charge form" className="my-3 rounded-lg border border-gray-200 max-w-full mx-auto block" />
 
       <NoteCallout>
         Payments and Additional Charges are tracked separately: Payments record money you've paid toward the vendor's total, while Additional Charges increase that total when a vendor adds a new cost.
